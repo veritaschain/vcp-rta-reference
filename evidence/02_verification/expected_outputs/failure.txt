@@ -1,0 +1,30 @@
+============================================================
+VCP Chain Verification Report
+============================================================
+File: vcp_rta_demo_events_tampered.jsonl
+Total Events: 149
+Unique TraceIDs: 30
+
+Event Types:
+  ACK: 30
+  CLS: 30
+  EXE: 30
+  ORD: 30
+  SIG: 29
+
+Verification Results:
+  Genesis: PASS
+  Hash Chain: FAIL
+  Timestamp Monotonicity: PASS
+  Signatures: SKIPPED (pynacl not installed)
+
+Errors (1):
+  [X] Line 5: PrevHash mismatch
+      expected: 92247509818194448970311c1d638b5e...
+      got: 0b762775ad74d708ca26a17ecd1ad371...
+
+============================================================
+VERIFICATION: FAIL - Chain integrity compromised
+============================================================
+
+Merkle Root: e35a6a62e2906f9ab3f94fd3ae77fb03ab148a449a05746daf1f3858fbf05859
