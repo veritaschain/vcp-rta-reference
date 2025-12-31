@@ -1,8 +1,0 @@
-{
-  "KeyID": "vcp-rta-key-2025-002",
-  "Algorithm": "ED25519",
-  "PublicKey": "0de95bd11e70b70452207b9dd8444b742283e31aafce5efc7dcbc1e3fd283012",
-  "ValidFrom": "2025-12-30T00:00:00Z",
-  "Purpose": "VCP Event Signing",
-  "PolicyID": "org.veritaschain.demo:vcp-rta-silver-001"
-}
