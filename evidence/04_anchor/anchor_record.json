@@ -1,0 +1,19 @@
+{
+  "AnchorID": "019b72fc-35b0-7394-9111-01f686c77",
+  "MerkleRoot": "131122183f52080721883d01cdd4cf0fe3ddbd0085b8d98b1b2cb3d52d631bab",
+  "Signature": "70241cfcb2840064f0320023722674d1bf656cc892c7acaa3d78aacd0cea0a33210c6a81434bf954ec5f8a4e1c762900684b984a28e43439ccdef13bd180fc05",
+  "SignAlgo": "ED25519",
+  "Timestamp": 1767160690096,
+  "TimestampISO": "2025-12-31T05:58:10.096Z",
+  "AnchorTarget": {
+    "Type": "PUBLIC_SERVICE",
+    "Identifier": "opentimestamps.org",
+    "Proof": "OTS_PENDING_131122183f520807",
+    "Note": "Simulated for public release - OpenTimestamps would be used in production"
+  },
+  "EventCount": 150,
+  "FirstEventID": "019b72fc-35a4-7250-afd1-5eb2b7683",
+  "LastEventID": "019b72fc-35b0-7257-9219-50e076be1",
+  "PolicyID": "org.veritaschain.demo:vcp-rta-silver-001",
+  "KeyID": "vcp-rta-key-2025-002"
+}

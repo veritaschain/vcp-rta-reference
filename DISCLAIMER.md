@@ -1,120 +1,108 @@
 # Disclaimer
 
-**Last Updated:** 2025-12-29
+## Important Legal Notice
+
+This repository and its contents are provided **for educational and demonstration purposes only**.
 
 ---
 
-## General Disclaimer
+## What This Repository IS
 
-This repository ("VCP Reference Trading Agent" or "VCP-RTA") is provided as a **reference implementation** for demonstrating compliance with the VeritasChain Protocol (VCP) v1.0 specification. It is intended for **educational and demonstration purposes only**.
+✅ A reference implementation of VCP (VeritasChain Protocol) v1.1 Silver Tier
+✅ A demonstration of cryptographic audit trail concepts
+✅ A learning resource for understanding VCP compliance
+✅ A starting point for integration testing
 
----
+## What This Repository IS NOT
 
-## No Financial Advice
-
-Nothing in this repository constitutes financial, investment, legal, or tax advice. The trading signals, execution data, and performance metrics shown are from a **demo account** and do not represent:
-
-- Actual trading results
-- Guaranteed future performance
-- Investment recommendations
-- Solicitation to trade
-
-**Past performance does not guarantee future results.**
+❌ **NOT** a product, service, or commercial offering
+❌ **NOT** a certification or compliance determination
+❌ **NOT** investment advice or trading recommendation
+❌ **NOT** a guarantee of any trading performance
+❌ **NOT** intended for production use without proper key management
+❌ **NOT** a substitute for professional legal, financial, or regulatory advice
 
 ---
 
 ## No Warranty
 
-This software and documentation are provided "AS IS" without warranty of any kind, express or implied, including but not limited to:
-
-- Merchantability
-- Fitness for a particular purpose
-- Non-infringement
-- Accuracy or completeness
+THE SOFTWARE AND DOCUMENTATION ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ---
 
 ## Limitation of Liability
 
-In no event shall the authors, contributors, or the VeritasChain Standards Organization (VSO) be liable for any:
-
-- Direct, indirect, incidental, special, or consequential damages
-- Loss of profits, data, or business opportunities
-- Trading losses or financial damages
-
-arising out of the use or inability to use this software or documentation.
+IN NO EVENT SHALL THE AUTHORS, CONTRIBUTORS, OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
-## Demo Account Data
+## Sample Data
 
-All trading data in this repository is from a **demo/paper trading account**. Demo account conditions may differ significantly from live trading:
+The sample events, trades, and AI consensus records included in this repository are **entirely fictional** and generated for demonstration purposes. They do not represent:
 
-- No real capital at risk
-- Execution may not reflect live market conditions
-- Spreads and slippage may differ
-- No emotional trading pressure
+- Real trading activity
+- Real financial instruments
+- Real market conditions
+- Real AI model outputs
+- Real broker connections
 
 ---
 
-## Third-Party Services
+## Cryptographic Keys
 
-This reference implementation may reference third-party services (AI APIs, brokers, timestamping services). We make no representations about:
+The Ed25519 keys included in this repository are **demonstration keys only**. They:
 
-- Availability of these services
-- Accuracy of their outputs
-- Their terms of service compliance
+- Were generated specifically for this demo
+- Should NEVER be used in production
+- Do not represent any real identity or organization
+- Should be replaced with properly managed keys for any serious use
 
 ---
 
 ## Regulatory Compliance
 
-This reference implementation is not certified by any regulatory authority. Users are responsible for ensuring their own compliance with applicable laws and regulations, including but not limited to:
+This reference implementation demonstrates technical concepts only. It does NOT:
 
-- Securities regulations
-- Anti-money laundering (AML) requirements
-- Know Your Customer (KYC) obligations
-- Data protection laws (GDPR, etc.)
+- Constitute compliance with any regulation (MiFID II, SEC, etc.)
+- Replace professional compliance assessment
+- Guarantee acceptance by any regulatory authority
+- Represent official VeritasChain certification
 
----
-
-## Anonymity
-
-The trading agent in this repository is intentionally anonymized to maintain the neutrality of the VCP specification. No claims are made regarding:
-
-- The identity of the operator
-- The specific broker or venue used
-- Geographic location of operations
+For actual VCP certification, please contact:
+- VC-Certified Program: [veritaschain.org/certification](https://veritaschain.org/certification)
 
 ---
 
-## Verification Independence
+## Third-Party Services
 
-The verification tools provided allow **independent third-party verification** of the event chain. However:
+References to external services (OpenTimestamps, brokers, exchanges) are for illustrative purposes. The authors:
 
-- Verification confirms data integrity, not trading profitability
-- Hash chain validity does not validate trading strategy quality
-- Merkle root anchoring proves existence, not correctness
+- Have no affiliation with these services
+- Make no guarantees about their availability or reliability
+- Do not endorse any specific service provider
 
 ---
 
 ## Use at Your Own Risk
 
-By using this repository, you acknowledge that:
+If you choose to use any code or concepts from this repository:
 
-1. You have read and understood this disclaimer
-2. You accept all risks associated with its use
-3. You will not hold the authors liable for any damages
+1. You do so at your own risk
+2. You are responsible for proper implementation
+3. You must conduct your own security review
+4. You must manage cryptographic keys appropriately
+5. You must ensure compliance with applicable regulations
 
 ---
 
 ## Contact
 
-For questions regarding this disclaimer:
+For questions about this disclaimer or the repository:
 
-- **VCP Specification**: https://github.com/veritaschain/vcp-spec
-- **VSO**: https://veritaschain.org
+**VeritasChain Standards Organization (VSO)**
+- Email: legal@veritaschain.org
+- Website: [veritaschain.org](https://veritaschain.org)
 
 ---
 
-**This is a reference implementation for VCP compliance demonstration only.**
+*Last updated: December 2025*

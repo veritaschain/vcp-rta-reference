@@ -1,277 +1,317 @@
-# VCP-RTA System Architecture
+# VCP v1.1 Three-Layer Architecture
 
-**Document ID:** ARCH-2025-001  
-**Version:** 1.0  
-**Date:** 2025-12-29  
-
----
+This document explains the three-layer integrity architecture introduced in VCP v1.1.
 
 ## Overview
 
-VCP Reference Trading Agent (VCP-RTA) is a demonstration system that implements the VeritasChain Protocol (VCP) v1.0 Silver Tier specification. This document describes the system architecture and data flow.
-
----
-
-## System Components
+VCP v1.1 introduces a clear separation of concerns for integrity and security mechanisms:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         VCP-RTA Architecture                             │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────────────────┐ │
-│  │   Market     │     │     AI       │     │      Trading             │ │
-│  │    Data      │────▶│  Consensus   │────▶│      Platform            │ │
-│  │   Source     │     │   Engine     │     │      (Demo)              │ │
-│  └──────────────┘     └──────────────┘     └──────────────────────────┘ │
-│         │                    │                        │                  │
-│         ▼                    ▼                        ▼                  │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │                      VCP Event Logger                                ││
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   ││
-│  │  │   SIG   │─▶│   ORD   │─▶│   ACK   │─▶│   EXE   │─▶│   CLS   │   ││
-│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘   ││
-│  │       │            │            │            │            │         ││
-│  │       └────────────┴────────────┴────────────┴────────────┘         ││
-│  │                              │                                       ││
-│  │                              ▼                                       ││
-│  │                    ┌─────────────────┐                              ││
-│  │                    │   Hash Chain    │                              ││
-│  │                    │   (SHA-256)     │                              ││
-│  │                    └─────────────────┘                              ││
-│  │                              │                                       ││
-│  │                              ▼                                       ││
-│  │                    ┌─────────────────┐                              ││
-│  │                    │  Merkle Tree    │                              ││
-│  │                    │  (RFC 6962)     │                              ││
-│  │                    └─────────────────┘                              ││
-│  │                              │                                       ││
-│  │                              ▼                                       ││
-│  │                    ┌─────────────────┐                              ││
-│  │                    │ OpenTimestamps  │                              ││
-│  │                    │    Anchor       │                              ││
-│  │                    └─────────────────┘                              ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  LAYER 3: External Verifiability                                    │
+│  ─────────────────────────────────                                  │
+│  Purpose: Third-party verification without trusting the producer    │
+│                                                                     │
+│  Components:                                                        │
+│  ├─ Digital Signature (Ed25519/Dilithium): REQUIRED                │
+│  ├─ Timestamp (dual format ISO+int64): REQUIRED                    │
+│  └─ External Anchor (Blockchain/TSA): REQUIRED                     │
+│                                                                     │
+│  Frequency: Tier-dependent (10min / 1hr / 24hr)                    │
+│                                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│  LAYER 2: Collection Integrity    ← Core for completeness          │
+│  ────────────────────────────────                                   │
+│  Purpose: Prove completeness of event batches                       │
+│                                                                     │
+│  Components:                                                        │
+│  ├─ Merkle Tree (RFC 6962): REQUIRED                               │
+│  ├─ Merkle Root: REQUIRED                                          │
+│  └─ Audit Path (for verification): REQUIRED                        │
+│                                                                     │
+│  Note: Enables third-party verification of batch completeness      │
+│                                                                     │
+├─────────────────────────────────────────────────────────────────────┤
+│  LAYER 1: Event Integrity                                           │
+│  ────────────────────────                                           │
+│  Purpose: Individual event completeness                             │
+│                                                                     │
+│  Components:                                                        │
+│  ├─ EventHash (SHA-256 of canonical event): REQUIRED               │
+│  └─ PrevHash (link to previous event): OPTIONAL                    │
+│                                                                     │
+│  Note: PrevHash provides real-time detection (OPTIONAL in v1.1)    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Event Flow
+## Layer 1: Event Integrity
 
-### 1. Signal Generation (SIG)
+### Purpose
 
-```
-Market Data → AI Models → Consensus Vote → SIG Event
-                │
-                ├── Gemini: direction + confidence
-                ├── GPT: direction + confidence
-                ├── Claude: direction + confidence
-                ├── Grok: direction + confidence
-                └── Perplexity: direction + confidence
-```
+Ensure that individual events have not been modified since creation.
 
-### 2. Order Lifecycle
+### Components
+
+#### EventHash (REQUIRED)
+
+Every VCP event must include an EventHash computed over its canonical form:
 
 ```
-SIG → ORD → ACK → EXE → ... → CLS
- │     │     │     │           │
- │     │     │     │           └── Position closed
- │     │     │     └── Order filled
- │     │     └── Broker acknowledged
- │     └── Order submitted
- └── Signal generated
+EventHash = SHA-256(canonical(Header) + canonical(Payload) + PrevHash)
 ```
 
-### 3. Hash Chain Construction
+**Canonicalization**: RFC 8785 JSON Canonicalization Scheme (JCS)
 
+```python
+def compute_event_hash(header, payload, prev_hash):
+    canonical_header = RFC8785_canonicalize(header)
+    canonical_payload = RFC8785_canonicalize(payload)
+    hash_input = canonical_header + canonical_payload + prev_hash.encode()
+    return SHA256(hash_input).hexdigest()
 ```
-Genesis: PrevHash = "0" × 64
-    │
-    ▼
-Event #1 ───┐
-    │       │
-    ▼       │  EventHash = SHA-256(
-Event #2 ◀─┘    canonical(Header) +
-    │           canonical(Payload) +
-    ▼           PrevHash
-Event #3       )
-    │
-    ▼
-   ...
+
+#### PrevHash (OPTIONAL in v1.1)
+
+Links to the previous event's EventHash, creating a hash chain.
+
+**v1.0**: REQUIRED (except for INIT events)
+**v1.1**: OPTIONAL
+
+**When to use PrevHash:**
+| Use Case | Recommended? | Rationale |
+|----------|--------------|-----------|
+| HFT Systems | Yes | Real-time detection of event loss |
+| Regulatory Submission | Yes | Familiar to auditors |
+| Development/Testing | No | Simplifies implementation |
+| MT4/MT5 Integration | No | Reduces DLL complexity |
+
+---
+
+## Layer 2: Collection Integrity
+
+### Purpose
+
+Prove that a batch of events is complete — no events were omitted or added.
+
+### Components
+
+#### Merkle Tree (REQUIRED)
+
+All VCP implementations must construct Merkle Trees over event batches using RFC 6962 method with domain separation:
+
+```python
+def merkle_leaf_hash(event_hash: bytes) -> bytes:
+    return SHA256(b'\x00' + event_hash)
+
+def merkle_internal_hash(left: bytes, right: bytes) -> bytes:
+    return SHA256(b'\x01' + left + right)
+```
+
+**Why domain separation?** Prevents second preimage attacks where internal nodes could be confused with leaf nodes.
+
+#### Merkle Root (REQUIRED)
+
+The root of the Merkle tree, included in every event's Security object and externally anchored.
+
+#### Audit Path (REQUIRED)
+
+Implementations must be able to generate audit paths for verifying individual events:
+
+```python
+def generate_audit_path(tree, leaf_index):
+    """Generate proof that leaf is included in tree"""
+    path = []
+    for level in tree.levels:
+        sibling = get_sibling(level, leaf_index)
+        path.append(sibling)
+        leaf_index //= 2
+    return path
 ```
 
 ---
 
-## VCP Module Implementation
+## Layer 3: External Verifiability
 
-### VCP-CORE
+### Purpose
 
-| Field | Implementation |
-|-------|----------------|
-| EventID | UUID v7 (time-sortable) |
-| TraceID | Signal ID (lifecycle tracking) |
-| Timestamp | Unix milliseconds |
-| TimestampPrecision | MILLISECOND |
-| ClockSyncStatus | BEST_EFFORT |
-| HashAlgo | SHA-256 |
+Enable third parties to verify integrity without trusting the log producer.
 
-### VCP-TRADE
+### Components
 
-| Field | Implementation |
-|-------|----------------|
-| OrderID | Broker ticket number |
-| Side | BUY / SELL |
-| Price | String (decimal precision) |
-| Quantity | String (lot size) |
-| OrderType | MARKET |
+#### Digital Signatures (REQUIRED)
 
-### VCP-GOV
+All events must be signed. Supported algorithms:
 
-| Field | Implementation |
-|-------|----------------|
-| AlgoID | VCP-RTA |
-| AlgoVersion | 1.0.0 |
-| DecisionType | AI_CONSENSUS |
-| AIModels | 5 models with direction/confidence |
-| ConsensusDirection | BUY / SELL / NONE |
-| ConsensusScore | Weighted average |
+| Algorithm | Status | Use Case |
+|-----------|--------|----------|
+| ED25519 | DEFAULT | Standard use |
+| ECDSA_SECP256K1 | SUPPORTED | Bitcoin compatibility |
+| DILITHIUM2 | FUTURE | Post-quantum |
 
-### VCP-RISK
+#### Timestamps (REQUIRED)
 
-| Field | Implementation |
-|-------|----------------|
-| TPPips | Take Profit (pips) |
-| SLPips | Stop Loss (pips) |
-| TTLMinutes | Time-To-Live |
-| MaxSpreadPips | Maximum spread filter |
-
-### VCP-SEC
-
-| Field | Implementation |
-|-------|----------------|
-| EventHash | SHA-256 (64 hex chars) |
-| PrevHash | Previous EventHash |
-| SignAlgo | ED25519 (prepared) |
-| Signature | null (Silver Tier) |
-| KeyID | vcp-rta-key-2025-001 |
-
----
-
-## Data Formats
-
-### Event Structure (JSON)
+Dual-format for maximum compatibility:
 
 ```json
 {
-  "Header": {
-    "EventID": "UUID v7",
-    "TraceID": "signal_id",
-    "Timestamp": 1234567890123,
-    "EventType": "SIG|ORD|ACK|EXE|CLS",
-    "Symbol": "USDJPY",
-    ...
-  },
-  "Payload": {
-    "VCP_GOV": { ... },
-    "VCP_TRADE": { ... },
-    "VCP_RISK": { ... }
-  },
-  "Security": {
-    "EventHash": "64-char hex",
-    "PrevHash": "64-char hex",
-    ...
-  }
+  "Timestamp": 1735520400000000,
+  "TimestampISO": "2025-12-30T00:00:00.000000Z"
 }
 ```
 
-### Chain File (JSONL)
+#### External Anchor (REQUIRED in v1.1)
 
-One event per line, ordered by timestamp.
+**Critical Change**: External Anchoring is now REQUIRED for all tiers.
 
+| Tier | Frequency | Target |
+|------|-----------|--------|
+| Platinum | 10 min | Blockchain, RFC 3161 TSA |
+| Gold | 1 hour | RFC 3161 TSA, Attested DB |
+| Silver | 24 hours | OpenTimestamps, FreeTSA |
+
+**Why Required?** Without external anchoring, a log producer could modify the Merkle Root before anchoring, undermining "Verify, Don't Trust".
+
+---
+
+## How the Layers Work Together
+
+### Detection Scenarios
+
+| Attack | Layer 1 | Layer 2 | Layer 3 |
+|--------|---------|---------|---------|
+| Modify event content | ✅ EventHash mismatch | ✅ Merkle path invalid | ✅ Signature invalid |
+| Delete an event | ✅ PrevHash break (if used) | ✅ Merkle Root mismatch | ✅ Anchor mismatch |
+| Add fake event | ✅ Signature missing | ✅ Merkle Root mismatch | ✅ Anchor mismatch |
+| Reorder events | ✅ PrevHash break (if used) | ✅ MerkleIndex mismatch | ✅ Timestamp violation |
+
+### Completeness Guarantee
+
+**Definition**: Third parties can cryptographically verify not only that events were not altered, but that **no required events were omitted**.
+
+**How it works:**
+1. Events are hashed (Layer 1)
+2. Hashes form Merkle tree leaves (Layer 2)
+3. Merkle Root is externally anchored (Layer 3)
+
+Once anchored, the log producer cannot:
+- Remove events (changes Merkle Root)
+- Add events (changes Merkle Root)
+- Modify events (changes EventHash → Merkle Root)
+
+---
+
+## Implementation Example
+
+### Event Creation
+
+```python
+def create_vcp_v11_event(header, payload, prev_hash, merkle_root, anchor_ref):
+    # Layer 1: Compute EventHash
+    event_hash = compute_event_hash(header, payload, prev_hash)
+    
+    # Sign the event
+    signature = ed25519_sign(event_hash, private_key)
+    
+    # Build Security object with all three layers
+    security = {
+        # Layer 1
+        "EventHash": event_hash,
+        "PrevHash": prev_hash,  # OPTIONAL but included
+        "HashAlgo": "SHA256",
+        
+        # Layer 2
+        "MerkleIndex": current_index,
+        "MerkleRoot": merkle_root,
+        
+        # Layer 3
+        "SignAlgo": "ED25519",
+        "Signature": signature,
+        "KeyID": key_id,
+        "AnchorReference": anchor_ref
+    }
+    
+    return {"Header": header, "Payload": payload, "Security": security}
 ```
-{"Header":{...},"Payload":{...},"Security":{...}}
-{"Header":{...},"Payload":{...},"Security":{...}}
-...
+
+### Batch Anchoring
+
+```python
+def anchor_batch(events):
+    # Layer 1: Collect EventHashes
+    event_hashes = [e["Security"]["EventHash"] for e in events]
+    
+    # Layer 2: Build Merkle Tree
+    merkle_root = compute_merkle_root(event_hashes)
+    
+    # Layer 3: External Anchor
+    anchor_record = external_anchor(merkle_root)
+    
+    # Update all events with Merkle info
+    for i, event in enumerate(events):
+        event["Security"]["MerkleIndex"] = i
+        event["Security"]["MerkleRoot"] = merkle_root
+        event["Security"]["AnchorReference"] = {
+            "AnchorID": anchor_record["AnchorID"],
+            "AnchorTarget": anchor_record["AnchorTarget"]["Type"],
+            "AnchorTimestamp": anchor_record["Timestamp"]
+        }
+    
+    return events, anchor_record
 ```
 
 ---
 
 ## Verification Process
 
-```
-┌─────────────────────────────────────────────────┐
-│              Verification Flow                   │
-├─────────────────────────────────────────────────┤
-│                                                  │
-│  1. Load JSONL file                             │
-│         │                                        │
-│         ▼                                        │
-│  2. Check Genesis (PrevHash = zeros)            │
-│         │                                        │
-│         ▼                                        │
-│  3. For each event:                             │
-│     ├── Verify PrevHash matches previous        │
-│     ├── Recalculate EventHash                   │
-│     └── Verify hash matches stored              │
-│         │                                        │
-│         ▼                                        │
-│  4. Check timestamp monotonicity                │
-│         │                                        │
-│         ▼                                        │
-│  5. Calculate Merkle Root                       │
-│         │                                        │
-│         ▼                                        │
-│  6. Report: PASS or FAIL                        │
-│                                                  │
-└─────────────────────────────────────────────────┘
+```python
+def verify_vcp_v11_chain(events, public_key, anchor_record):
+    results = {}
+    
+    # Layer 1: Verify EventHashes and chain
+    results["layer1"] = verify_event_integrity(events)
+    
+    # Layer 2: Verify Merkle Root
+    event_hashes = [e["Security"]["EventHash"] for e in events]
+    computed_root = compute_merkle_root(event_hashes)
+    stored_root = events[0]["Security"]["MerkleRoot"]
+    results["layer2"] = computed_root == stored_root
+    
+    # Layer 3: Verify signatures and anchor
+    results["layer3_signatures"] = verify_all_signatures(events, public_key)
+    results["layer3_anchor"] = verify_anchor(anchor_record, computed_root)
+    
+    return all(results.values()), results
 ```
 
 ---
 
-## Security Considerations
+## FAQ
 
-### Immutability
+### Why is PrevHash OPTIONAL now?
 
-- Each event's hash depends on all previous events
-- Modifying any event invalidates all subsequent hashes
-- Genesis hash (64 zeros) anchors the chain
+PrevHash provides real-time tamper detection but is redundant with Merkle + External Anchor for external verifiability. Making it optional:
+1. Simplifies Silver tier implementations
+2. Reduces complexity for platforms like MT4/MT5
+3. Maintains full backward compatibility (can still use if desired)
 
-### Transparency
+### What if I skip Layer 1 PrevHash?
 
-- All AI model votes are recorded
-- Decision factors are preserved
-- Audit trail is complete
+You lose **real-time** tamper detection but retain **batch-level** integrity through Layer 2. For most use cases (especially Silver tier), this is acceptable.
 
-### Verifiability
+### Can an attacker regenerate the Merkle Root?
 
-- Third parties can verify independently
-- No trust in VCP-RTA system required
-- Offline verification supported
-
----
-
-## Compliance Mapping
-
-| Regulation | VCP Implementation |
-|------------|-------------------|
-| MiFID II Art. 17 | VCP-GOV AlgoID |
-| MiFID II RTS 24 | 7-year retention capable |
-| MiFID II RTS 25 | ClockSyncStatus field |
-| EU AI Act Art. 12 | VCP-CORE automatic logging |
-| EU AI Act Art. 13 | VCP-GOV DecisionFactors |
-| EU AI Act Art. 14 | OperatorID field |
-| GDPR | AccountID pseudonymized |
+Not after external anchoring. The anchor creates a timestamp proof that the specific Merkle Root existed at a specific time. Regenerating would require:
+1. Compromising the anchor service
+2. OR rewriting blockchain history
+3. OR both parties colluding (if using VCP-XREF)
 
 ---
 
-## References
+## Related Documents
 
-- [VCP Specification v1.0](https://github.com/veritaschain/vcp-spec)
-- [RFC 8785 - JSON Canonicalization Scheme](https://tools.ietf.org/html/rfc8785)
-- [RFC 6962 - Certificate Transparency](https://tools.ietf.org/html/rfc6962)
-
----
-
-**VCP-RTA - VCP v1.0 Silver Tier Reference Implementation**
+- [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec)
+- [VERIFICATION_GUIDE.md](VERIFICATION_GUIDE.md)
+- [MIGRATION_v1.0_to_v1.1.md](MIGRATION_v1.0_to_v1.1.md)

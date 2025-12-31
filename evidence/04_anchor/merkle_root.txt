@@ -1,7 +1,1 @@
-# VCP Merkle Root
-# Generated: 2025-12-29T16:00:00+09:00
-# Chain: vcp_rta_demo_events.jsonl
-# Events: 150
-# Algorithm: RFC 6962 Certificate Transparency
-
-e0a1a56c35c63b0ea33754f000ecdc73c1130c2cb9997b5deb728ba1a2ba69b9
+131122183f52080721883d01cdd4cf0fe3ddbd0085b8d98b1b2cb3d52d631bab

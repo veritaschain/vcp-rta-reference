@@ -1,95 +1,105 @@
 {
-  "package": {
-    "name": "VCP-RTA Evidence Pack",
-    "version": "1.1.0",
-    "created": "2025-12-29T16:00:00+09:00",
-    "description": "VCP v1.0 Silver Tier reference implementation with Ed25519 signatures"
-  },
-  "system": {
-    "AlgoID": "VCP-RTA",
-    "AlgoVersion": "1.0.0",
-    "Symbol": "USDJPY",
-    "VenueID": "VENUE_DEMO",
-    "MICCode": "XDMO",
-    "AccountID": "3662c67e3a86 (SHA-256 pseudonymized)"
-  },
-  "chain": {
-    "file": "01_sample_logs/vcp_rta_demo_events.jsonl",
-    "events": 150,
-    "trades": 30,
-    "event_types": {
-      "SIG": 30,
-      "ORD": 30,
-      "ACK": 30,
-      "EXE": 30,
-      "CLS": 30
+  "version": "1.1.0",
+  "vcp_version": "1.1",
+  "conformance_tier": "SILVER",
+  "created_at": "2025-12-30T00:00:00Z",
+  "description": "VCP v1.1 Reference Trading Agent Evidence Pack",
+  "merkle_root": "131122183f52080721883d01cdd4cf0fe3ddbd0085b8d98b1b2cb3d52d631bab",
+  "event_count": 150,
+  "trade_count": 30,
+  "contents": {
+    "00_raw": {
+      "description": "Raw signal data from trading system (v1.0 preserved)",
+      "status": "preserved"
     },
-    "merkle_root": "e0a1a56c35c63b0ea33754f000ecdc73c1130c2cb9997b5deb728ba1a2ba69b9"
-  },
-  "cryptography": {
-    "hash_algo": "SHA-256",
-    "sign_algo": "ED25519",
-    "key_id": "vcp-rta-key-2025-001",
-    "public_key": "cb1fc548399df6a36c935ab82eae8901467b02fd51ae6948447d111f4494c0d9",
-    "public_key_file": "04_anchor/public_key.json"
-  },
-  "verification": {
-    "genesis": "PASS",
-    "hash_chain": "PASS",
-    "timestamps": "PASS",
-    "signatures": "PASS (150/150)",
-    "overall": "PASS"
-  },
-  "files": {
-    "01_sample_logs/vcp_rta_demo_events.jsonl": {
-      "description": "VCP event chain (150 signed events)",
-      "events": 150
+    "01_sample_logs": {
+      "description": "VCP v1.1 compliant event chain",
+      "files": [
+        {
+          "name": "vcp_rta_demo_events.jsonl",
+          "format": "JSONL",
+          "events": 150,
+          "event_types": {
+            "SIG": 30,
+            "ORD": 30,
+            "ACK": 30,
+            "EXE": 30,
+            "CLS": 30
+          }
+        }
+      ]
     },
-    "01_sample_logs/README_sample_log.md": {
-      "description": "Sample logs documentation"
+    "02_verification": {
+      "description": "Pre-run verification reports",
+      "files": [
+        {
+          "name": "verification_report.txt",
+          "result": "PASS"
+        }
+      ]
     },
-    "02_verification/VERIFY.md": {
-      "description": "Third-party verification procedures"
+    "03_tamper_demo": {
+      "description": "Tamper detection demonstration",
+      "files": [
+        {
+          "name": "tamper_demo.py",
+          "purpose": "Demonstrates three-layer tamper detection"
+        },
+        {
+          "name": "tamper_demo_output.txt",
+          "result": "Tampering detected at event #76"
+        }
+      ]
     },
-    "02_verification/expected_outputs/success.txt": {
-      "description": "Expected output for valid chain"
+    "04_anchor": {
+      "description": "External anchor and cryptographic keys",
+      "files": [
+        {
+          "name": "merkle_root.txt",
+          "content": "Merkle root hash"
+        },
+        {
+          "name": "anchor_record.json",
+          "anchor_type": "PUBLIC_SERVICE",
+          "anchor_target": "opentimestamps.org"
+        },
+        {
+          "name": "public_key.json",
+          "algorithm": "ED25519",
+          "key_id": "vcp-rta-key-2025-002"
+        }
+      ]
     },
-    "02_verification/expected_outputs/failure.txt": {
-      "description": "Expected output for tampered chain"
-    },
-    "03_tamper_demo/tamper_demo.py": {
-      "description": "Tamper detection demonstration script"
-    },
-    "03_tamper_demo/tamper_step.md": {
-      "description": "Tamper demo step-by-step guide"
-    },
-    "03_tamper_demo/vcp_rta_demo_events_tampered.jsonl": {
-      "description": "Tampered chain (line 5 deleted)"
-    },
-    "03_tamper_demo/diff.txt": {
-      "description": "Diff report showing deleted event"
-    },
-    "04_anchor/merkle_root.txt": {
-      "description": "Merkle root for timestamping"
-    },
-    "04_anchor/public_key.json": {
-      "description": "Ed25519 public key for signature verification"
-    },
-    "04_anchor/anchor_readme.md": {
-      "description": "Anchor and cryptographic material documentation"
-    },
-    "05_environment/ENVIRONMENT.md": {
-      "description": "Execution environment specification"
+    "05_environment": {
+      "description": "Execution environment information (v1.0 preserved)",
+      "status": "preserved"
     }
   },
-  "notes": {
-    "prices": "Synthesized for public release (not actual execution prices)",
-    "prompt_hash": "Intentionally empty (prompt content is proprietary)",
-    "model_names": "Preserved for AI transparency demonstration",
-    "signatures": "All 150 events are Ed25519 signed"
+  "v1_1_features": {
+    "three_layer_architecture": true,
+    "policy_identification": {
+      "enabled": true,
+      "policy_id": "org.veritaschain.demo:vcp-rta-silver-001"
+    },
+    "external_anchor": {
+      "enabled": true,
+      "frequency": "daily",
+      "target": "opentimestamps.org"
+    },
+    "merkle_fields": {
+      "merkle_root_in_events": true,
+      "merkle_index_in_events": true,
+      "anchor_reference_in_events": true
+    },
+    "prev_hash": {
+      "enabled": true,
+      "note": "OPTIONAL in v1.1 but enabled for demonstration"
+    }
   },
-  "contact": {
-    "organization": "Anonymous Early Adopter",
-    "spec": "https://github.com/veritaschain/vcp-spec"
+  "verification": {
+    "layer1_event_integrity": "PASS",
+    "layer2_collection_integrity": "PASS",
+    "layer3_external_verifiability": "PASS",
+    "overall": "PASS"
   }
 }

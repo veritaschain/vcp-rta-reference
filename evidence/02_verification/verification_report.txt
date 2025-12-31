@@ -1,0 +1,35 @@
+======================================================================
+VCP v1.1 Chain Verification Report
+======================================================================
+File: evidence/01_sample_logs/vcp_rta_v1_1_demo_events.jsonl
+VCP Version: 1.1
+Total Events: 150
+Unique TraceIDs: 30
+
+Event Types:
+  ACK: 30
+  CLS: 30
+  EXE: 30
+  ORD: 30
+  SIG: 30
+
+Three-Layer Verification Results:
+  [Layer 1: Event Integrity]
+    Genesis: PASS
+    Event Hashes: PASS
+    Hash Chain: PASS
+
+  [Layer 2: Collection Integrity]
+    Merkle Root: PASS
+
+  [Layer 3: External Verifiability]
+    Timestamp Monotonicity: PASS
+    Policy Identification: PASS
+    Anchor Reference: PASS
+    Signatures: SKIPPED (no public key or PyNaCl)
+
+======================================================================
+VERIFICATION: PASS - VCP v1.1 Chain integrity verified
+======================================================================
+
+Merkle Root: 131122183f52080721883d01cdd4cf0fe3ddbd0085b8d98b1b2cb3d52d631bab

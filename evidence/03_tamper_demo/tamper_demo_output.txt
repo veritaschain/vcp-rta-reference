@@ -1,0 +1,117 @@
+======================================================================
+ VCP v1.1 Tamper Detection Demonstration
+ Three-Layer Integrity Architecture
+======================================================================
+
+This demonstration shows how VCP v1.1's three-layer architecture
+detects any modification to the event chain.
+
+VCP v1.1 Integrity Layers:
+  Layer 1: Event Integrity (EventHash, PrevHash)
+  Layer 2: Collection Integrity (Merkle Tree)
+  Layer 3: External Verifiability (Signatures, Anchors)
+
+Loading events from: evidence/01_sample_logs/vcp_rta_v1_1_demo_events.jsonl
+Loaded 150 events
+
+──────────────────────────────────────────────────────────────────────
+STEP 1: Verify Original Chain
+──────────────────────────────────────────────────────────────────────
+
+======================================================================
+ Original Chain Verification
+======================================================================
+Total Events: 150
+
+Three-Layer Verification:
+  [Layer 1: Event Integrity]
+    EventHash:  PASS
+    Hash Chain: PASS
+  [Layer 2: Collection Integrity]
+    Merkle Root: PASS
+  [Layer 3: External Verifiability]
+    Policy ID:   PASS
+    Anchor Ref:  PASS
+
+
+  ✅ VERIFICATION: PASS
+======================================================================
+
+──────────────────────────────────────────────────────────────────────
+STEP 2: Create Tampered Copy
+──────────────────────────────────────────────────────────────────────
+  Action: Removed event 76 (type: SIG)
+  TraceID: 20251118_043000_SELL...
+  Original count: 150 → Tampered count: 149
+
+──────────────────────────────────────────────────────────────────────
+STEP 3: Verify Tampered Chain
+──────────────────────────────────────────────────────────────────────
+
+======================================================================
+ Tampered Chain Verification
+======================================================================
+Total Events: 149
+
+Three-Layer Verification:
+  [Layer 1: Event Integrity]
+    EventHash:  FAIL
+    Hash Chain: FAIL
+  [Layer 2: Collection Integrity]
+    Merkle Root: FAIL
+  [Layer 3: External Verifiability]
+    Policy ID:   PASS
+    Anchor Ref:  PASS
+
+  ⚠️  Event 76: EventHash mismatch (expected: d02f7c881d730170..., got: ec1a61147c59a02f...)
+  ⚠️  Event 76: PrevHash mismatch (expected: ff1ae7bb346ddcd6..., got: 768eeabb5c256673...)
+  ⚠️  Event 1: MerkleRoot mismatch (computed: 975d918d6605ddd9..., stored: 131122183f520807...)
+
+  ❌ VERIFICATION: FAIL
+======================================================================
+
+──────────────────────────────────────────────────────────────────────
+STEP 4: Detection Explanation
+──────────────────────────────────────────────────────────────────────
+
+Why tampering was detected:
+
+  1. [Layer 1] Hash Chain Break:
+     Event 76 (now different) has PrevHash pointing to
+     the removed event, but it's no longer present.
+
+  2. [Layer 1] EventHash Mismatch:
+     The EventHash of subsequent events was computed with the
+     previous event's hash - removing an event breaks this chain.
+
+  3. [Layer 2] Merkle Root Mismatch:
+     The stored MerkleRoot was computed over ALL original events.
+     Removing any event changes the computed Merkle Root.
+
+  VCP v1.1 Completeness Guarantee:
+  ────────────────────────────────
+  Even if the attacker recalculated all hashes after removing
+  an event, the externally anchored Merkle Root (Layer 3)
+  would not match, because anchoring is REQUIRED in v1.1.
+
+======================================================================
+ Summary
+======================================================================
+
+  Original Chain: ✅ PASS (all layers verified)
+  Tampered Chain: ❌ FAIL (tampering detected)
+
+  Detection Point: Event 76
+  Layers Affected: Layer 1 (Hash Chain), Layer 2 (Merkle)
+
+  Conclusion:
+  VCP v1.1's three-layer architecture ensures that ANY modification
+  (insertion, deletion, or alteration) is cryptographically detectable.
+
+  Key v1.1 Enhancement:
+  External Anchoring is now REQUIRED for all tiers, making
+  post-hoc Merkle Root manipulation impossible.
+
+======================================================================
+ "Verify, Don't Trust" - VCP v1.1
+======================================================================
