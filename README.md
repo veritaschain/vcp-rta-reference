@@ -60,7 +60,7 @@ vcp-rta-reference/
 │
 ├── evidence/
 │   ├── 00_raw/                  # Raw signal data (preserved)
-│   ├── 01_sample_logs/
+│   ├── 01_recorded_events/
 │   │   └── vcp_rta_demo_events.jsonl    # 150 signed events
 │   ├── 02_verification/
 │   │   └── verification_report.txt       # Pre-run verification
