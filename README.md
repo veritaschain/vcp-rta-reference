@@ -37,7 +37,6 @@ AI decision signals, order lifecycle events, and execution outcomes are recorded
 ---
 
 ## Repository Structure
-
 ```
 vcp_v1_1_repo_aligned/
 ├── evidence/
@@ -53,6 +52,11 @@ vcp_v1_1_repo_aligned/
 │       ├── security_object.json     # Merkle tree & signatures
 │       ├── anchor_reference.json    # External anchor info
 │       └── public_key.json          # Verification public key
+├── examples/
+│   └── ai-trading-integration/
+│       ├── README.md                # Integration guide
+│       ├── vcp_logger.py            # VCP v1.1 logger module
+│       └── vcp_poc_demo.py          # PoC demonstration
 ├── tools/
 │   └── verifier/
 │       └── vcp_verifier.py          # Chain verification tool
@@ -63,7 +67,6 @@ vcp_v1_1_repo_aligned/
 ├── DISCLAIMER.md
 └── LICENSE
 ```
-
 ---
 
 ## Quick Verification
@@ -163,6 +166,16 @@ This evidence pack is licensed under [CC BY 4.0](https://creativecommons.org/lic
 - [VeritasChain Standards Organization](https://github.com/veritaschain)
 
 ---
+
+## Integration Examples
+
+The `examples/` directory contains reference implementations for integrating VCP into your own systems:
+
+- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events with VCP v1.1 compliance
+
+---
+
+## Related Links
 
 **VeritasChain Standards Organization (VSO)**
 *Developing cryptographically verifiable audit standards for algorithmic and AI-driven systems.*
