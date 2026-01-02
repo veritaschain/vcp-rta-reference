@@ -1,0 +1,18 @@
+{
+  "VCPVersion": "1.1",
+  "ConformanceTier": "SILVER",
+  "AnchorTimestamp": "2026-01-02T04:43:55.991990Z",
+  "AnchorTimestampInt": 1767329035992005163,
+  "EventCount": 36,
+  "FirstSequence": 0,
+  "LastSequence": 35,
+  "MerkleTree": {
+    "Algorithm": "RFC6962_SHA256",
+    "Root": "c011eea15102abebf295c78e7e8fd48176fa04eb1b65919da7701a98ffad76f0",
+    "LeafCount": 36
+  },
+  "AnchorTarget": "OpenTimestamps",
+  "AnchorStatus": "PENDING",
+  "ObjectHash": "794cbce4d6887b5d34eb9dc33aa654902a3979de0fe877c81ece98a6d722c8ce",
+  "ObjectSignature": "aicuqykS6fdaWIzQM4hnhlz1xX9PE8qfTG2i8zhCxLv59lyCbEaxsOMXyNcjfLFDTCaqUMjVKnTekf/Bdl79CA=="
+}
