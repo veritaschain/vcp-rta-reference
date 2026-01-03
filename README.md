@@ -1,7 +1,11 @@
 ## 🔗 Related Reference Implementations (Other Platforms)
-> 📌 **World-First Evidence (cTrader)**  
+
+### cTrader
+
+> 📌 **World-First Evidence**  
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
 > 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
+
 
 # VCP Reference Trading Agent (VCP-RTA)
 
