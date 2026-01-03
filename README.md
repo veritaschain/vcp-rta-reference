@@ -1,3 +1,4 @@
+## 🔗 Related Reference Implementations (Other Platforms)
 > 📌 **Related World-First Evidence (cTrader)**  
 > Publicly documented, independently verifiable cryptographic audit trail PoC for **cTrader**  
 > 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
