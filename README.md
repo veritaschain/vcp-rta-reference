@@ -1,5 +1,5 @@
-> 📌 **New Reference Implementation Available (cTrader)**  
-> A publicly documented, independently verifiable cryptographic audit trail PoC for **cTrader**  
+> 📌 **Related World-First Evidence (cTrader)**  
+> Publicly documented, independently verifiable cryptographic audit trail PoC for **cTrader**  
 > 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
 
 # VCP Reference Trading Agent (VCP-RTA)
