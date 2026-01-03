@@ -181,11 +181,3 @@ The `examples/` directory contains reference implementations for integrating VCP
 
 - [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec/tree/main/spec/v1.1)
 - [VeritasChain Standards Organization](https://github.com/veritaschain)
-
----
-
-## Integration Examples
-
-The `examples/` directory contains reference implementations for integrating VCP into your own systems:
-
-- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events with VCP v1.1 compliance
