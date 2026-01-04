@@ -1,0 +1,10 @@
+{
+  "VCPVersion": "1.1",
+  "AgentID": "VCP-RTA-Reference",
+  "PolicyID": "org.veritaschain.rta:silver-reference-v1",
+  "Algorithm": "ED25519",
+  "PublicKey": "8f55a71ef23962e173bbb7262b088f1a620e2ff49f27fd0a76dfdaaf774e3e66",
+  "CreatedAt": "2026-01-04T00:21:29.355+00:00",
+  "CreatedAtInt": 1767486089355889920,
+  "Note": "Reference implementation key - for verification purposes only"
+}

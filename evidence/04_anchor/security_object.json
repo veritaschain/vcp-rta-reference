@@ -1,0 +1,29 @@
+{
+  "VCPVersion": "1.1",
+  "Tier": "SILVER",
+  "PolicyID": "org.veritaschain.rta:silver-reference-v1",
+  "AgentID": "VCP-RTA-Reference",
+  "CreatedAt": "2026-01-04T00:21:29.355+00:00",
+  "CreatedAtInt": 1767486089355889920,
+  "EventCount": 40,
+  "FirstSequence": 1,
+  "LastSequence": 40,
+  "MerkleTree": {
+    "Algorithm": "RFC6962",
+    "HashAlgo": "SHA256",
+    "Root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+    "LeafCount": 40,
+    "Leaves": [
+      "d7a64a574d2506aea2c527c0ffc99fc1aac037025ec2b10ef27658d8af116664",
+      "0a2bfaa8e891042ae500f0581d5912c33de751ff027bb44b49a147eaed3cf806",
+      "500eba6ab54c943c574ca4684ccd4b44430d2bbeffcdc74a8f7122aff754cecb",
+      "6c178757955e19d5351ca5b3d07efca87f0cc7c652ad5b2799c3ef058fc815d3",
+      "50b44f9ac1cf6e9fc5288d2081adf8de11fa302137b25bc9edce14f4ffdcf4d0",
+      "..."
+    ]
+  },
+  "SignAlgo": "ED25519",
+  "PublicKey": "8f55a71ef23962e173bbb7262b088f1a620e2ff49f27fd0a76dfdaaf774e3e66",
+  "AnchorID": "9fb5ef7b-c013-4d49-8be3-b5e71a29e361",
+  "Signature": "c6bb5f96d2aa5a593cc932f0c039740c2d1588dd8b81b072cb2de45cb15562b288ba160c3cc3f3b9f7365257c756893e32fd7b75f62ae0aacd99ba374c85f70f"
+}
