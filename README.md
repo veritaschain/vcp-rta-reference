@@ -6,6 +6,11 @@
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
 > 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
 
+### FIX Protocol
+
+> 📌 **World-First Evidence**  
+> Publicly documented, independently verifiable cryptographic audit trail PoC  
+> 👉 https://github.com/veritaschain/vcp-fix-rta-reference
 
 # VCP Reference Trading Agent (VCP-RTA)
 
