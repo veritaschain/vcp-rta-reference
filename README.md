@@ -18,12 +18,6 @@
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
 > 👉 https://github.com/veritaschain/vcp-ibkr-rta-reference
 
-### Nasdaq (OUCH / ITCH)
-
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 Coming Soon
-
 # VCP Reference Trading Agent (VCP-RTA)
 
 [**English**](README.md) | [日本語](README.ja.md)
