@@ -18,7 +18,7 @@
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
 > 👉 https://github.com/veritaschain/vcp-ibkr-rta-reference
 
-## Nasdaq (OUCH / ITCH)
+### Nasdaq (OUCH / ITCH)
 
 > 📌 **World-First Evidence**  
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
