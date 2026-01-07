@@ -22,7 +22,7 @@
 
 > 📌 **World-First Evidence**  
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-nasdaq-rta-reference
+> 👉 Coming Soon
 
 # VCP Reference Trading Agent (VCP-RTA)
 
