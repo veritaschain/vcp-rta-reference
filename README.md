@@ -24,6 +24,12 @@
 > Publicly documented, independently verifiable cryptographic audit trail PoC  
 > 👉 https://github.com/veritaschain/vcp-nasdaq-rta-reference
 
+### cloudflare
+
+> 📌 **World-First Evidence**  
+> Publicly documented, independently verifiable cryptographic audit trail PoC  
+> 👉 https://github.com/veritaschain/vcp-cloudflare-rta-reference
+
 # VCP Reference Trading Agent (VCP-RTA)
 
 [**English**](README.md) | [日本語](README.ja.md)
