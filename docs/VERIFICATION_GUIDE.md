@@ -111,7 +111,7 @@ python tools/verifier/vcp_verifier.py \
 | Audit path | Stored path reaches the expected root, and MerkleIndex matches file position | UNVERIFIABLE without an expected root |
 | External anchor | `ots verify` on the proof file | UNVERIFIABLE. `anchor_reference.json` claiming `ANCHORED` is not confirmation |
 
-The report prints the basis it relied on: trusted key fingerprint, whether an anchor was checked and whether it was confirmed, and the event range (first and last EventID, sequence range, time range, count).
+The report prints the basis it relied on: trusted key fingerprint, whether an anchor was checked and whether it was confirmed, and the event range (first and last EventID, sequence endpoints, time range, count). Sequence endpoints are the first and last numbers in the file; the sequence check says whether the numbers in between are contiguous.
 
 On this evidence pack the published root matches the duplicate-odd-node tree. A strict RFC 6962 §2.1 Merkle Tree Hash (largest power-of-two split) is different for this 40-leaf batch and is not the verdict. The report shows that root for comparison only.
 

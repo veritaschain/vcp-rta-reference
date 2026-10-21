@@ -1244,8 +1244,6 @@ def _unimplemented(anchor_check: Dict[str, Any]) -> List[str]:
         "Hash algorithms other than SHA-256 are not implemented.",
         "Full RFC 8785 JSON Canonicalization Scheme is not implemented. "
         "EventHash uses sorted-key json.dumps concatenation, which matches this evidence pack.",
-        "Strict RFC 6962 §2.1 Merkle Tree Hash (largest power-of-two split) is not the "
-        "tree used for the verdict. The verdict uses the VCP v1.1 duplicate-odd-node tree.",
     ]
     if not anchor_check.get("anchor_confirmed"):
         items.append(
@@ -1302,14 +1300,16 @@ def build_report(
     overall = _combine([checks[name]["result"] for name in CHECK_ORDER])
     fingerprint = public_key_fingerprint(public_key) if public_key else None
     anchor_check = checks["external_anchor"]
-    errors: List[str] = []
+    findings: List[str] = []
     for name in CHECK_ORDER:
         check = checks[name]
         if check["result"] == VALID:
             continue
-        errors.append(f"{name}: {check['detail']}")
+        detail = check["detail"]
+        findings.append(f"{name}: {detail}")
         for example in check.get("examples") or []:
-            errors.append(f"{name}: {example}")
+            if example not in detail:
+                findings.append(f"{name}: {example}")
     report = {
         "spec_version": SPEC_VERSION,
         "v1_2_supported": False,
@@ -1339,7 +1339,7 @@ def build_report(
         },
         "checks": checks,
         "unimplemented": _unimplemented(anchor_check),
-        "errors": errors,
+        "findings": findings,
         "generated_at": _now(),
     }
     return report
@@ -1443,7 +1443,7 @@ def _error_report(message: str, events_path: Optional[str] = None) -> Dict[str, 
         },
         "checks": checks,
         "unimplemented": _unimplemented(checks["external_anchor"]),
-        "errors": [message],
+        "findings": [message],
         "generated_at": _now(),
     }
 
@@ -1470,7 +1470,7 @@ def format_human(report: Dict[str, Any]) -> str:
         f"  Events judged:            {event_range.get('count')}",
         f"  First EventID:            {event_range.get('first_event_id')}",
         f"  Last EventID:             {event_range.get('last_event_id')}",
-        f"  Sequence range:           {event_range.get('first_sequence')} .. {event_range.get('last_sequence')}",
+        f"  Sequence endpoints:       {event_range.get('first_sequence')} .. {event_range.get('last_sequence')}",
         f"  Time range:               {event_range.get('first_timestamp')} .. {event_range.get('last_timestamp')}",
         f"  Trusted key file:         {basis.get('trusted_key_file') or '(none)'}",
         f"  Trusted key fingerprint:  {basis.get('trusted_key_fingerprint') or '(none)'}",
@@ -1501,12 +1501,13 @@ def format_human(report: Dict[str, Any]) -> str:
     for item in report.get("unimplemented") or []:
         lines.append(f"  - {item}")
     lines.append("")
-    if report.get("errors"):
-        lines.append("Errors")
-        shown = report["errors"][:20]
-        for err in shown:
-            lines.append(f"  - {err}")
-        remaining = len(report["errors"]) - len(shown)
+    findings = report.get("findings") or []
+    if findings:
+        lines.append("Findings")
+        shown = findings[:20]
+        for item in shown:
+            lines.append(f"  - {item}")
+        remaining = len(findings) - len(shown)
         if remaining > 0:
             lines.append(f"  - … {remaining} more")
         lines.append("")
