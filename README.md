@@ -1,34 +1,12 @@
-## 🔗 Related Reference Implementations (Other Platforms)
+## Related reference implementations
 
-### cTrader
+Other public repositories, listed without a claim about priority or certification:
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
-
-### FIX Protocol
-
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-fix-rta-reference
-
-### Interactive Brokers (IBKR)
-
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-ibkr-rta-reference
-
-### Nasdaq
-
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-nasdaq-rta-reference
-
-### cloudflare
-
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-cloudflare-rta-reference
+- cTrader: https://github.com/veritaschain/vcp-ctrader-rta-reference
+- FIX Protocol: https://github.com/veritaschain/vcp-fix-rta-reference
+- Interactive Brokers (IBKR): https://github.com/veritaschain/vcp-ibkr-rta-reference
+- Nasdaq: https://github.com/veritaschain/vcp-nasdaq-rta-reference
+- Cloudflare: https://github.com/veritaschain/vcp-cloudflare-rta-reference
 
 # VCP Reference Trading Agent (VCP-RTA)
 
@@ -40,17 +18,15 @@
 
 > **"Verify, Don't Trust."**
 
-VCP-RTA is a reference implementation demonstrating **VCP v1.1 Silver Tier** compliance for algorithmic trading systems. This repository provides a complete, verifiable evidence pack that third parties can independently validate.
+VCP-RTA is a VCP **v1.1** evidence pack for an algorithmic-trading log. v1.2 is not claimed here. Third parties can check the Ed25519 signatures and the published Merkle root with `tools/verifier/vcp_verifier.py`. The external OpenTimestamps anchor cannot be checked from the files in this repository. See [evidence/VERIFICATION_STATUS.md](evidence/VERIFICATION_STATUS.md).
 
-📄 **A detailed "World's First" Evidence Report documenting independent prior-art analyses is included in this repository.**
+`docs/VCP_Worlds_First_Evidence_Report.pdf` (the same file as `VCP_Worlds_First_Evidence_Report.pdf` at the repository root) is kept unchanged. Its filename is not a verification result for this pack, and the PDF was not modified.
 
 ---
 
 ## Overview
 
-This Evidence Pack demonstrates a production-grade implementation of VCP in a live MT5 environment. The implementation captures AI-driven trading decisions and execution events using a non-invasive sidecar architecture that operates independently of the core trading platform.
-
-AI decision signals, order lifecycle events, and execution outcomes are recorded externally, cryptographically hashed, organized into Merkle trees, and anchored to enable independent third-party verification.
+The pack records AI decision signals, order events, and execution events from an MT5 sidecar. Events are hashed, signed with Ed25519, and combined into a VCP v1.1 Merkle tree. A third party can recompute that tree and check the signatures. The named OpenTimestamps proof is not in the public files, so the external anchor stays unverified.
 
 ---
 
@@ -59,12 +35,12 @@ AI decision signals, order lifecycle events, and execution outcomes are recorded
 | Feature | v1.0 | v1.1 |
 |---------|------|------|
 | **Three-Layer Architecture** | - | ✅ NEW |
-| **External Anchor (Silver)** | OPTIONAL | **REQUIRED** |
+| **External Anchor (Silver)** | OPTIONAL | Named in this pack; `merkle_root.ots` is not published |
 | **Policy Identification** | - | **REQUIRED** |
 | **PrevHash** | REQUIRED | OPTIONAL |
-| **Completeness Guarantees** | - | ✅ NEW |
+| **Omission check** | - | Against the published Merkle root, when that root is supplied |
 
-> **v1.1 Core Enhancement:** Extends tamper-evidence to **completeness guarantees** — third parties can now verify not only that events were not altered, but that **no required events were omitted**.
+With the published security object, a missing or altered event changes the recomputed Merkle root. That check does not extend to an external timestamp: `merkle_root.ots` is not available.
 
 ---
 
@@ -72,7 +48,8 @@ AI decision signals, order lifecycle events, and execution outcomes are recorded
 ```
 vcp_v1_1_repo_aligned/
 ├── evidence/
-│   ├── evidence_index.json          # Evidence manifest
+│   ├── evidence_index.json          # Evidence manifest (descriptive fields; not signed)
+│   ├── VERIFICATION_STATUS.md       # What can and cannot be verified
 │   ├── 01_trade_logs/
 │   │   └── vcp_rta_events.jsonl     # VCP v1.1 event chain (40 events)
 │   ├── 02_verification/
@@ -105,47 +82,38 @@ vcp_v1_1_repo_aligned/
 
 ### Prerequisites
 - Python 3.8+
-- No external dependencies required (standard library only)
+- The `cryptography` package (`python3 -m pip install cryptography`). Without it, signature checks are UNVERIFIABLE.
 
 ### Run Verification
 
 ```bash
-# Clone the repository
 git clone https://github.com/veritaschain/vcp-rta-reference.git
 cd vcp-rta-reference
 
-# Run verification (Linux/macOS)
 python tools/verifier/vcp_verifier.py \
     evidence/01_trade_logs/vcp_rta_events.jsonl \
-    -s evidence/04_anchor/security_object.json
-
-# Run verification (Windows)
-python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json
-
-# Run tamper detection test
-python evidence/03_tamper_detection/tamper_detection_test.py
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    -a evidence/04_anchor/anchor_reference.json
 ```
 
-### Expected Output
+Windows:
 
+```cmd
+python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json -k evidence\04_anchor\public_key.json -a evidence\04_anchor\anchor_reference.json
 ```
-======================================================================
-VCP v1.1 Verification Report
-======================================================================
-[Verification Results]
-  Overall Status: [PASS] VALID
-  Total Events: 40
-  Valid Events: 40
-  Invalid Events: 0
 
-[Chain Integrity]
-  Sequence Continuity: [PASS]
-  PrevHash Integrity: [PASS]
-  Merkle Root: [PASS]
-======================================================================
-Verification complete: All checks passed
-======================================================================
-```
+Exit codes: `0` VALID, `1` INVALID, `2` UNVERIFIABLE. `--json` prints the same result as JSON. Details are in [docs/VERIFICATION_GUIDE.md](docs/VERIFICATION_GUIDE.md).
+
+### Expected result on the published pack
+
+Overall **UNVERIFIABLE** (exit 2), because the external anchor is not confirmed.
+
+- Ed25519 signatures: **VALID** (40 events; the trusted-key fingerprint is printed)
+- Merkle root: **VALID** against `86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e`
+- External anchor: **UNVERIFIABLE**. `merkle_root.ots` is not in the public files
+
+`evidence/03_tamper_detection/tampered_chain.jsonl`, with the same `-s` and `-k`, is **INVALID** (exit 1). The script `tamper_detection_test.py` is an older demo; its banner still says RFC 6962. Use the verifier above for the three-valued result.
 
 ---
 
@@ -174,15 +142,19 @@ This evidence pack anonymizes sensitive information:
 
 ### Three-Layer Architecture (VCP v1.1)
 
-1. **Layer 1: Event Integrity** - Individual event hash & signature (SHA-256 + Ed25519)
-2. **Layer 2: Collection Integrity** - RFC 6962 Merkle Tree + PrevHash linking
-3. **Layer 3: External Verifiability** - External timestamp anchoring (OpenTimestamps)
+1. **Layer 1: Event integrity** — SHA-256 event hash and Ed25519 signature. The verifier checks both when `--public-key` is supplied.
+2. **Layer 2: Collection integrity** — VCP v1.1 Merkle tree (SHA-256, `0x00` leaf prefix, `0x01` node prefix, odd node duplicated) plus optional PrevHash. This matches the published root. It is not a strict RFC 6962 §2.1 tree.
+3. **Layer 3: External anchor** — `anchor_reference.json` names OpenTimestamps and `merkle_root.ots`. That proof is not in the public files, so this layer is not verified.
 
-### Tamper Detection Capabilities
+### Tamper detection against the published root
 
-- ✅ **Event Omission** (Deletion Attack) - Detected via sequence gaps + Merkle mismatch
-- ✅ **Event Modification** (Alteration Attack) - Detected via Merkle root mismatch
-- ✅ **Event Insertion** (Injection Attack) - Detected via prev_hash + Merkle mismatch
+When the security object is supplied, the verifier reports INVALID for:
+
+- an omitted event (sequence gap, PrevHash break, Merkle root mismatch)
+- a modified event whose recomputed hash no longer matches
+- an inserted event that changes the recomputed root
+
+Those checks do not show that an external timestamp exists.
 
 ---
 
@@ -196,7 +168,7 @@ This evidence pack is licensed under [CC BY 4.0](https://creativecommons.org/lic
 
 The `examples/` directory contains reference implementations for integrating VCP into your own systems:
 
-- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events with VCP v1.1 compliance
+- **[AI Trading Integration](examples/ai-trading-integration/)** — Python logger that emits v1.1-shaped events. Its hash and anchor-signature encoding differ from this evidence pack; use the verifier on `evidence/` for the published chain.
 
 ---
 

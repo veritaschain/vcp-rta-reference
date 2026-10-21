@@ -2,7 +2,7 @@
 
 ## Overview
 
-VCP v1.1 employs a three-layer architecture to ensure complete integrity of trading logs. Each layer provides distinct guarantees that combine to create a cryptographically verifiable audit trail.
+VCP v1.1 describes a three-layer architecture for trading logs. In this repository the verifier checks Layer 1 signatures and the Layer 2 Merkle root. Layer 3, the external anchor, cannot be confirmed from the public files. This document describes v1.1 only. v1.2 is not claimed here.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -14,7 +14,7 @@ VCP v1.1 employs a three-layer architecture to ensure complete integrity of trad
 │  Components:                                                        │
 │  ├─ Digital Signature (Ed25519): REQUIRED                          │
 │  ├─ Timestamp (dual format ISO+int64): REQUIRED                    │
-│  └─ External Anchor (OpenTimestamps): REQUIRED                     │
+│  └─ External Anchor (OpenTimestamps): named here, not confirmed   │
 │                                                                     │
 │  Frequency: Daily (Silver Tier)                                    │
 │                                                                     │
@@ -25,7 +25,7 @@ VCP v1.1 employs a three-layer architecture to ensure complete integrity of trad
 │  Purpose: Prove completeness of event batches                       │
 │                                                                     │
 │  Components:                                                        │
-│  ├─ Merkle Tree (RFC 6962): REQUIRED                               │
+│  ├─ Merkle Tree (VCP v1.1 duplicate-odd-node): REQUIRED            │
 │  ├─ Merkle Root: REQUIRED                                          │
 │  └─ Audit Path (for verification): REQUIRED                        │
 │                                                                     │
@@ -104,8 +104,8 @@ Each event follows the VCP v1.1 schema with Header, Security, and PolicyIdentifi
 ```
 
 **Security features:**
-- SHA-256 event hashing (canonical JSON serialization)
-- Ed25519 digital signatures
+- SHA-256 event hashing (sorted-key `json.dumps` of Header concatenated with Payload; not full RFC 8785)
+- Ed25519 digital signatures, checked by `tools/verifier/vcp_verifier.py` against `evidence/04_anchor/public_key.json`
 - Required PolicyIdentification (v1.1)
 - Dual timestamp format (ISO + int64 nanoseconds)
 
@@ -113,9 +113,17 @@ Each event follows the VCP v1.1 schema with Header, Security, and PolicyIdentifi
 
 ## Layer 2: Collection Integrity
 
-### RFC 6962 Merkle Tree
+### VCP v1.1 Merkle tree
 
-Constructs a Merkle Tree from all event hashes with domain separation:
+The published root `86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e` matches this construction, which is what `security_object.json` records as `RFC6962` and what the VCP v1.1 pseudocode specifies:
+
+- Leaf: `SHA-256(0x00 || raw EventHash)`
+- Internal node: `SHA-256(0x01 || left || right)`
+- An odd node is duplicated
+
+That odd-node rule is not strict RFC 6962 §2.1. RFC 6962 splits at the largest power of two smaller than the node count. For these 40 leaves the strict root is `4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3`, and the verifier does not treat it as the expected root.
+
+The tree, with domain separation:
 
 ```
                     Merkle Root
@@ -129,9 +137,10 @@ Constructs a Merkle Tree from all event hashes with domain separation:
   H(0x00||E0)  H(0x00||E1)  H(0x00||E2)  H(0x00||E3)
 ```
 
-**RFC 6962 Domain Separation:**
+**Domain separation (shared with RFC 6962):**
 - Leaf nodes: `0x00` prefix
 - Internal nodes: `0x01` prefix
+- Odd nodes in this pack: duplicated, not the RFC 6962 power-of-two split
 
 **Benefits:**
 - Prevents second preimage attacks
@@ -160,10 +169,7 @@ Anchors Merkle Root to external services for third-party verification:
 [Merkle Root] ──submit──> [OpenTimestamps] ──anchor──> [Bitcoin]
 ```
 
-**Silver Tier requirements:**
-- External anchor is REQUIRED (was optional in v1.0)
-- Daily anchoring frequency
-- Third parties can independently verify timestamps
+The v1.1 text treats an external anchor as required for Silver. This repository names OpenTimestamps in `evidence/04_anchor/anchor_reference.json` and sets status `ANCHORED`. `merkle_root.ots` is not among the public files, tags, release assets, or other public veritaschain repositories searched on 2026-10-21. The anchor cannot be verified from those materials, and no replacement proof was created. See [evidence/VERIFICATION_STATUS.md](../evidence/VERIFICATION_STATUS.md).
 
 ---
 
@@ -175,8 +181,8 @@ Anchors Merkle Root to external services for third-party verification:
 | **Event deletion** | Sequence Gap + Merkle Root mismatch | L1 + L2 |
 | **Event insertion** | PrevHash mismatch + Merkle Root mismatch | L1 + L2 |
 | **Reordering** | PrevHash mismatch + Sequence Gap | L1 |
-| **Timestamp manipulation** | External anchor mismatch | L3 |
-| **Post-hoc log fabrication** | External anchor proves existence time | L3 |
+| **Timestamp manipulation** | Would require a confirmed external anchor. This repository does not include one. | L3 |
+| **Post-hoc log fabrication** | A confirmed external anchor would bound existence time. That proof is not in the public files. | L3 |
 
 ---
 
@@ -184,13 +190,12 @@ Anchors Merkle Root to external services for third-party verification:
 
 | Item | v1.0 | v1.1 |
 |------|------|------|
-| Merkle Tree | Optional | **Required** |
-| External Anchor | Optional | **Silver: Required** |
-| Policy Identification | None | **Required** |
+| Merkle tree | Optional | **VCP v1.1 duplicate-odd-node tree. Not strict RFC 6962 §2.1** |
+| External anchor | Optional in the v1.0 text | **Named in this pack. The proof file is not public, so it is not confirmed** |
+| Policy Identification | None | **Fields present** |
 | PrevHash | Required | Optional |
-| Completeness Guarantees | None | **Available** |
-| Dual Timestamp Format | None | **Required** |
-| RFC 6962 Compliance | None | **Required** |
+| Batch comparison | None | **Against a supplied expected root** |
+| Dual Timestamp Format | None | **Present on these events** |
 
 ---
 
@@ -199,4 +204,4 @@ Anchors Merkle Root to external services for third-party verification:
 - [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec/tree/main/spec/v1.1)
 - [OpenTimestamps](https://opentimestamps.org/)
 - [RFC 6962 - Certificate Transparency](https://datatracker.ietf.org/doc/html/rfc6962)
-- [RFC 8785 - JSON Canonicalization Scheme (JCS)](https://datatracker.ietf.org/doc/html/rfc8785)
+- [RFC 8785 - JSON Canonicalization Scheme (JCS)](https://datatracker.ietf.org/doc/html/rfc8785) — referenced by the v1.1 text. This pack's EventHash uses sorted-key `json.dumps`, not a full JCS implementation.

@@ -4,15 +4,17 @@
   "PolicyID": "org.veritaschain.rta:silver-reference-v1",
   "AgentID": "VCP-RTA-Reference",
   "CreatedAt": "2026-01-04T00:21:29.355+00:00",
-  "Description": "VCP v1.1 Silver Tier Evidence Pack - Fully Compliant Reference Implementation",
+  "Description": "VCP v1.1 evidence pack. Ed25519 signatures and the VCP v1.1 Merkle root can be checked with tools/verifier. External anchor confirmation is not available from the public files. See VERIFICATION_STATUS.md.",
   "Compliance": {
-    "ThreeLayerArchitecture": true,
-    "RFC6962MerkleTree": true,
+    "ThreeLayerArchitecture": "Event signatures and a Merkle root are present. External anchor confirmation is not.",
+    "RFC6962MerkleTree": false,
+    "MerkleConstruction": "VCP v1.1 duplicate-odd-node (SHA-256, 0x00 leaf prefix, 0x01 node prefix). Not a strict RFC 6962 section 2.1 Merkle Tree Hash.",
     "DualTimestampFormat": true,
-    "PolicyIdentification": true,
-    "ExternalAnchor": true,
-    "AnchorTarget": "OpenTimestamps",
-    "AnchorStatus": "ANCHORED"
+    "PolicyIdentification": "Fields are present on the events. This index is not a certification.",
+    "ExternalAnchor": false,
+    "AnchorTarget": "OpenTimestamps (named in 04_anchor/anchor_reference.json)",
+    "AnchorStatus": "UNVERIFIABLE",
+    "AnchorNote": "merkle_root.ots is named but was not found in public git history, tags, GitHub release assets, or other public veritaschain repositories. See VERIFICATION_STATUS.md."
   },
   "Anonymization": {
     "TicketNumbers": "SHA-256 hashed",

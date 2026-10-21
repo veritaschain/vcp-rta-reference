@@ -196,6 +196,16 @@ python tools/verifier/vcp_verifier.py \
 
 The Ed25519 signature on the security object authenticates the published Merkle root under the trusted key. It is not an external anchor.
 
+### Public search for `merkle_root.ots` (2026-10-21)
+
+The proof file was not found, so `ots verify` was not run and no new timestamp was created. The external anchor cannot be verified from the public materials. The search is recorded in [evidence/VERIFICATION_STATUS.md](../evidence/VERIFICATION_STATUS.md). It covered:
+
+- every blob reachable from this repository's branches (`main`, `cursor/vcp-verifier-three-valued-faf6`) and tags (`v1.0.0`, `v1.1.0`) after `git fetch --all --tags`
+- GitHub releases `v1.0.0` and `v1.1.0` of `veritaschain/vcp-rta-reference` (both have empty asset lists)
+- default-branch trees and shallow clones of the other public `veritaschain` repositories
+
+Historical `merkle_root.txt` files on the tags record different roots (`e0a1a56c…` and `13112218…`), not `86c05dba…a47e`. The v1.1.0 anchor record says its OpenTimestamps proof was simulated.
+
 ---
 
 ## Understanding Verification Results
