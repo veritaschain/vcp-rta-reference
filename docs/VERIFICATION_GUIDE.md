@@ -1,8 +1,8 @@
 # VCP v1.1 Verification Guide
 
-This guide verifies cryptographic integrity and completeness guarantees as defined in VCP v1.1, corresponding to the publicly released Evidence Pack.
+This guide shows how to run the VCP v1.1 verifier on the published Evidence Pack and how to read its results. Each check is VALID, INVALID, or UNVERIFIABLE (検証不能). The verifier does not claim v1.2 support, and it does not treat a missing input as a pass.
 
-Third parties can independently reproduce all verification steps without requiring access to the original trading system.
+Third parties can reproduce these steps without access to the original trading system.
 
 ---
 
@@ -10,7 +10,15 @@ Third parties can independently reproduce all verification steps without requiri
 
 - Python 3.8 or higher
 - Git (for cloning the repository)
-- No external libraries required (standard library only)
+- The `cryptography` package, used for Ed25519 signature verification:
+
+```bash
+python3 -m pip install cryptography
+```
+
+If `cryptography` is not installed, signature checks are **UNVERIFIABLE**. They are not reported as passed.
+
+The verifier implements **VCP v1.1 only**. It does not claim v1.2 support.
 
 ---
 
@@ -37,27 +45,75 @@ This displays:
 
 ### Step 3: Verify Chain Integrity
 
+Pass the trusted public key explicitly. The Merkle root is read from the security object. The anchor reference is an input, not a confirmation.
+
 **Linux / macOS:**
 ```bash
 python tools/verifier/vcp_verifier.py \
     evidence/01_trade_logs/vcp_rta_events.jsonl \
-    -s evidence/04_anchor/security_object.json
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    -a evidence/04_anchor/anchor_reference.json
 ```
 
 **Windows:**
 ```cmd
-python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json
+python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json -k evidence\04_anchor\public_key.json -a evidence\04_anchor\anchor_reference.json
 ```
 
-**Verification items (Three-Layer Architecture):**
+Machine-readable JSON (stdout is JSON only; exit status is still the overall result):
 
-| Layer | Check | Method |
-|-------|-------|--------|
-| Layer 1: Event Integrity | Event hash | SHA-256 recomputation |
-| Layer 1: Event Integrity | Sequence continuity | Sequential number check |
-| Layer 1: Event Integrity | PrevHash chain | Hash linking verification |
-| Layer 2: Collection Integrity | Merkle Root | RFC 6962 tree rebuild |
-| Layer 3: External Verifiability | Anchor reference | Presence check |
+```bash
+python tools/verifier/vcp_verifier.py \
+    evidence/01_trade_logs/vcp_rta_events.jsonl \
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    -a evidence/04_anchor/anchor_reference.json \
+    --json
+```
+
+Write both reports:
+
+```bash
+python tools/verifier/vcp_verifier.py \
+    evidence/01_trade_logs/vcp_rta_events.jsonl \
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    --json-output /tmp/vcp-report.json \
+    -o /tmp/vcp-report.txt
+```
+
+**CLI options:**
+
+| Option | Meaning |
+|--------|---------|
+| `events_file` | JSONL event chain (positional) |
+| `-s`, `--security-object` | Security object. Its Merkle root is the expected root. Also checks the object's Ed25519 signature and published batch bounds. |
+| `-k`, `--public-key` | Trusted Ed25519 public key (JSON `PublicKey` as hex or base64, or a raw key file). Required for signature verification. |
+| `-a`, `--anchor` | Anchor reference JSON. Supplying it does not confirm the external anchor. |
+| `--ots` | OpenTimestamps proof file. `ots verify` runs only when this file exists and the `ots` tool is on `PATH`. |
+| `--expected-root` | Expected Merkle root hex. If it disagrees with `--security-object`, the Merkle check is INVALID. |
+| `--json` | JSON result on stdout. |
+| `--json-output` | Write JSON to a file. The human report stays on stdout unless `--json` is also set. |
+| `-o`, `--output` | Write the human report to a file. |
+
+**Exit codes:** `0` VALID, `1` INVALID, `2` UNVERIFIABLE (検証不能).
+
+**What is checked:**
+
+| Check | How | If the input needed for the check is missing |
+|-------|-----|-----------------------------------------------|
+| Event hash | SHA-256 of sorted-key JSON Header concatenated with sorted-key JSON Payload | — |
+| Sequence | Contiguity inside the supplied file | — |
+| PrevHash | Each stored PrevHash against the previous EventHash | Absent links are UNVERIFIABLE, not a pass |
+| Ed25519 signature | Signature over the raw 32-byte EventHash, using `--public-key`. The signature field may be hex (this evidence pack) or base64 | UNVERIFIABLE |
+| Merkle root | VCP v1.1 tree (0x00 / 0x01 prefixes, odd node duplicated) compared with the supplied expected root | UNVERIFIABLE. The computed root is shown and is not a pass |
+| Audit path | Stored path reaches the expected root, and MerkleIndex matches file position | UNVERIFIABLE without an expected root |
+| External anchor | `ots verify` on the proof file | UNVERIFIABLE. `anchor_reference.json` claiming `ANCHORED` is not confirmation |
+
+The report prints the basis it relied on: trusted key fingerprint, whether an anchor was checked and whether it was confirmed, and the event range (first and last EventID, sequence range, time range, count).
+
+On this evidence pack the published root matches the duplicate-odd-node tree. A strict RFC 6962 §2.1 Merkle Tree Hash (largest power-of-two split) is different for this 40-leaf batch and is not the verdict. The report shows that root for comparison only.
 
 ### Step 4: Run Tamper Detection Test
 
@@ -84,59 +140,84 @@ Verify that all cases report **[DETECTED]**.
 ```bash
 python tools/verifier/vcp_verifier.py \
     evidence/03_tamper_detection/tampered_chain.jsonl \
-    -s evidence/04_anchor/security_object.json
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    -a evidence/04_anchor/anchor_reference.json
 ```
 
 **Windows:**
 ```cmd
-python tools\verifier\vcp_verifier.py evidence\03_tamper_detection\tampered_chain.jsonl -s evidence\04_anchor\security_object.json
+python tools\verifier\vcp_verifier.py evidence\03_tamper_detection\tampered_chain.jsonl -s evidence\04_anchor\security_object.json -k evidence\04_anchor\public_key.json -a evidence\04_anchor\anchor_reference.json
 ```
 
-Verifying the tampered file **should report errors** (FAIL is the correct result).
+The tampered file is an omission of one event. The overall result is **INVALID** (exit code 1): sequence, PrevHash, published batch bounds, and the Merkle root do not match. Signatures on the events that remain can still verify; that does not make the file valid.
+
+Without `-s` / `--expected-root`, the Merkle check is **UNVERIFIABLE**. Computing a root and having nothing to compare it with is not a pass.
 
 ---
 
 ## Verification Checklist
 
-| Item | Expected Result |
+Command: genuine JSONL, `-s` security object, `-k` public key, `-a` anchor reference.
+
+| Item | Expected result |
 |------|-----------------|
+| Overall | UNVERIFIABLE (検証不能), exit code 2 |
 | Event count | 40 |
-| Valid events | 40 |
-| Sequence continuity | PASS |
-| PrevHash integrity | PASS |
-| Merkle Root (RFC 6962) | PASS |
-| Tampered sample verification | FAIL (detection successful) |
+| Event hash | VALID |
+| Sequence inside the file | VALID (1 .. 40) |
+| PrevHash | VALID |
+| Ed25519 signatures | VALID against `public_key.json` (fingerprint is printed) |
+| Merkle root | VALID against the security object's root |
+| External anchor | UNVERIFIABLE. `merkle_root.ots` is not in this repository. Claimed status `ANCHORED` is not confirmation. |
+| Anchor confirmed | no |
+| Tampered sample, with `-s` and `-k` | INVALID, exit code 1 |
+| Genuine sample without an expected root | Merkle UNVERIFIABLE, overall UNVERIFIABLE, exit code 2 |
+| Genuine sample with a different public key | Signature INVALID, overall INVALID, exit code 1 |
 
 ---
 
 ## External Anchor Verification
 
-Silver Tier requires external anchoring. To verify:
+`evidence/04_anchor/anchor_reference.json` names OpenTimestamps and `merkle_root.ots`. That proof file is not in this repository. The verifier therefore reports the external anchor as **UNVERIFIABLE** and sets anchor confirmed to **no**.
 
-1. Review `evidence/04_anchor/anchor_reference.json`
-2. Note the `MerkleRoot` value
-3. Submit to OpenTimestamps for independent verification
-4. Verify timestamp with the .ots proof file (if available)
+Optional confirmation, only when both the proof file and the `ots` tool exist:
 
-**Anchor Target:** OpenTimestamps (Bitcoin-backed)
+```bash
+python tools/verifier/vcp_verifier.py \
+    evidence/01_trade_logs/vcp_rta_events.jsonl \
+    -s evidence/04_anchor/security_object.json \
+    -k evidence/04_anchor/public_key.json \
+    -a evidence/04_anchor/anchor_reference.json \
+    --ots path/to/merkle_root.ots
+```
+
+`ots verify` is executed only in that case. Exit 0 together with OpenTimestamps success text is required before the anchor is reported as confirmed. A pending or unreachable calendar stays UNVERIFIABLE. The verifier does not invent a timestamp proof.
+
+The Ed25519 signature on the security object authenticates the published Merkle root under the trusted key. It is not an external anchor.
 
 ---
 
 ## Understanding Verification Results
 
-### PASS Results
-- **Event Hash: PASS** - All events have valid SHA-256 hashes
-- **Sequence: PASS** - No gaps in event numbering
-- **PrevHash: PASS** - Hash chain is unbroken
-- **Merkle Root: PASS** - Computed root matches stored root
+Each check, and the overall result, is one of:
 
-### FAIL Results (Expected for Tampered Data)
-When verifying `tampered_chain.jsonl`:
-- **Sequence error** - Missing event detected
-- **PrevHash mismatch** - Chain broken by omission
-- **Merkle Root mismatch** - Tree integrity violated
+- **VALID** — the check finished and matched. Exit code 0 only when every check is VALID.
+- **INVALID** — the check finished and did not match. Any INVALID check makes the overall result INVALID (exit code 1).
+- **UNVERIFIABLE (検証不能)** — the check could not be finished. A missing expected root, trusted key, or anchor proof is this result, not a pass. If nothing is INVALID but something is UNVERIFIABLE, the overall result is UNVERIFIABLE (exit code 2).
 
-**Important:** FAIL on tampered data confirms the detection system works correctly.
+### On the genuine evidence pack
+With the key and the security object supplied: event hashes, signatures, sequence, PrevHash, and the Merkle root are VALID. The external anchor is UNVERIFIABLE because `merkle_root.ots` is absent, so the overall result is UNVERIFIABLE.
+
+### On `tampered_chain.jsonl`
+With the same key and security object: sequence, PrevHash, batch bounds, and Merkle root are INVALID. The overall result is INVALID.
+
+### Running the verifier tests
+
+```bash
+python3 -m pip install pytest cryptography
+python3 -m pytest tools/verifier/tests -q
+```
 
 ---
 
