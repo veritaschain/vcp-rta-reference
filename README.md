@@ -53,7 +53,9 @@ vcp_v1_1_repo_aligned/
 │   ├── 01_trade_logs/
 │   │   └── vcp_rta_events.jsonl     # VCP v1.1 event chain (40 events)
 │   ├── 02_verification/
-│   │   └── verification_report.txt  # Verification results
+│   │   ├── verification_report.txt  # Historical output, kept unchanged
+│   │   ├── verification_report_2026-10-22.txt  # Current verifier result
+│   │   └── verification_report_2026-10-22.json
 │   ├── 03_tamper_detection/
 │   │   ├── tamper_detection_test.py # Tamper detection test
 │   │   └── tampered_chain.jsonl     # Tampered sample for testing
@@ -114,6 +116,8 @@ Overall **UNVERIFIABLE** (exit 2), because the external anchor is not confirmed.
 - External anchor: **UNVERIFIABLE**. `merkle_root.ots` is not in the public files
 
 `evidence/03_tamper_detection/tampered_chain.jsonl`, with the same `-s` and `-k`, is **INVALID** (exit 1). The script `tamper_detection_test.py` is an older demo; its banner still says RFC 6962. Use the verifier above for the three-valued result.
+
+`evidence/02_verification/verification_report.txt` is a historical output kept unchanged. Its "Fully Compliant" wording is superseded. The current result is [`evidence/02_verification/verification_report_2026-10-22.txt`](evidence/02_verification/verification_report_2026-10-22.txt) (JSON: [`verification_report_2026-10-22.json`](evidence/02_verification/verification_report_2026-10-22.json)).
 
 ---
 

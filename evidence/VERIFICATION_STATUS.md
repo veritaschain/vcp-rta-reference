@@ -43,3 +43,5 @@ The external anchor cannot be verified from the public materials.
 ## Older wording left in place
 
 `02_verification/verification_report.txt` still says "Fully Compliant" and "Merkle Root (RFC 6962)". That file is an older generated report. It was not rewritten. The current verifier does not use that wording.
+
+`02_verification/verification_report.txt` is a historical output kept unchanged. Its "Fully Compliant" wording is superseded. The current result is `02_verification/verification_report_2026-10-22.txt` (JSON: `02_verification/verification_report_2026-10-22.json`).

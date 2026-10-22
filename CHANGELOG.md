@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## Later correction — 2026-10-22
+
+A new verification report only. This entry does not rewrite the notes below. Signed event data, the published Merkle root, anchor files, existing git tags, and `evidence/02_verification/verification_report.txt` were not changed.
+
+- `tools/verifier/vcp_verifier.py` at commit `c3167eb43761498a625e1626e7ad64957d8f2d3a` was run on 2026-10-22 19:05:25 JST against the published evidence pack (event log, security object, trusted public key, and anchor reference). `--json` wrote the JSON report.
+- Output: `evidence/02_verification/verification_report_2026-10-22.txt` and `evidence/02_verification/verification_report_2026-10-22.json`. Overall result UNVERIFIABLE, exit code 2. The anchor reference was checked; `merkle_root.ots` is not present, so the external anchor is UNVERIFIABLE. Event signatures (sequence 1 .. 40, 40 events) and the VCP v1.1 duplicate-odd-node Merkle root matched. That tree is not a strict RFC 6962 Merkle Tree Hash.
+- `evidence/02_verification/verification_report.txt` is a historical output kept unchanged. Its "Fully Compliant" wording is superseded. The 2026-10-22 files are the current result.
+
 ## Later correction — 2026-10-21
 
 Documentation and the verifier only. This entry does not rewrite the notes below. Signed event data, the published Merkle root, anchor files, and existing git tags were not changed.

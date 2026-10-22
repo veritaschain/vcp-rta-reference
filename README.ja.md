@@ -36,7 +36,9 @@ vcp_v1_1_repo_aligned/
 │   ├── 01_trade_logs/
 │   │   └── vcp_rta_events.jsonl
 │   ├── 02_verification/
-│   │   └── verification_report.txt
+│   │   ├── verification_report.txt  # 過去の出力。内容は変更しない
+│   │   ├── verification_report_2026-10-22.txt  # 現行の検証結果
+│   │   └── verification_report_2026-10-22.json
 │   ├── 03_tamper_detection/
 │   │   ├── tamper_detection_test.py
 │   │   └── tampered_chain.jsonl
@@ -76,6 +78,8 @@ python tools/verifier/vcp_verifier.py \
 この Merkle 木は VCP v1.1 の構成（葉に `0x00`、内部ノードに `0x01`、奇数ノードは複製）です。厳密な RFC 6962 §2.1 ではありません。
 
 `tampered_chain.jsonl` を同じ `-s` と `-k` で検証すると **INVALID**（終了コード 1）です。
+
+`evidence/02_verification/verification_report.txt` は過去の生成出力で、バイト列はそのまま残しています。そこに書かれた “Fully Compliant” という文言は現行ではなく、後継の結果に置き換えられています。現在の結果は [`evidence/02_verification/verification_report_2026-10-22.txt`](evidence/02_verification/verification_report_2026-10-22.txt) です（JSON は [`verification_report_2026-10-22.json`](evidence/02_verification/verification_report_2026-10-22.json)）。
 
 ---
 

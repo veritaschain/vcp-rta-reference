@@ -1,0 +1,139 @@
+{
+  "spec_version": "1.1",
+  "v1_2_supported": false,
+  "verifier": "vcp_verifier",
+  "result": "UNVERIFIABLE",
+  "result_ja": "検証不能",
+  "exit_code": 2,
+  "summary": "No check failed, but at least one check could not be completed (検証不能): external_anchor. Unconfirmed checks are not treated as passes.",
+  "basis": {
+    "events_file": "evidence/01_trade_logs/vcp_rta_events.jsonl",
+    "security_object_file": "evidence/04_anchor/security_object.json",
+    "trusted_key_file": "evidence/04_anchor/public_key.json",
+    "trusted_key_fingerprint": "sha256:65ea2f698c8cd0750a274493b044fc31c4a5ec84db612ce05a1b48a0a2a9d051",
+    "trusted_key_algorithm": "ED25519",
+    "trusted_public_key_hex": "8f55a71ef23962e173bbb7262b088f1a620e2ff49f27fd0a76dfdaaf774e3e66",
+    "expected_merkle_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+    "computed_merkle_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+    "merkle_algorithm": "vcp-1.1-duplicate-odd-node",
+    "rfc6962_strict_root": "4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3",
+    "anchor_reference_file": "evidence/04_anchor/anchor_reference.json",
+    "anchor_checked": true,
+    "anchor_confirmed": false,
+    "anchor_proof_file": "merkle_root.ots",
+    "anchor_proof_present": false,
+    "anchor_claimed_status": "ANCHORED",
+    "event_range": {
+      "count": 40,
+      "first_event_id": "28e6d6d7-91de-453e-8956-04575b911f14",
+      "last_event_id": "662366b1-e3bd-4963-ae5a-ca2492462244",
+      "first_sequence": 1,
+      "last_sequence": 40,
+      "first_timestamp": "2025-11-20T20:38:25.482205+09:00",
+      "last_timestamp": "2025-11-21T03:36:48.774980+09:00"
+    }
+  },
+  "checks": {
+    "spec_version": {
+      "result": "VALID",
+      "detail": "Declared version is 1.1. This verifier does not claim v1.2 support.",
+      "declared_versions": [
+        "1.1"
+      ]
+    },
+    "event_hash": {
+      "result": "VALID",
+      "detail": "All 40 EventHash values match SHA-256 of sorted-key JSON Header concatenated with sorted-key JSON Payload. This is not a full RFC 8785 canonicalization.",
+      "invalid_count": 0,
+      "unverifiable_count": 0,
+      "valid_count": 40,
+      "examples": []
+    },
+    "sequence": {
+      "result": "VALID",
+      "detail": "Sequence numbers in this file are contiguous from 1 to 40. Contiguity inside the file does not by itself prove the batch is complete.",
+      "first_sequence": 1,
+      "last_sequence": 40,
+      "examples": []
+    },
+    "prev_hash": {
+      "result": "VALID",
+      "detail": "PrevHash on events 2..40 matches the previous EventHash. The first event has no predecessor in this file.",
+      "examples": [],
+      "mismatch_count": 0,
+      "missing_count": 0
+    },
+    "security_schema": {
+      "result": "VALID",
+      "detail": "All 40 events include the v1.1 Security fields this verifier checks (Version, EventHash, HashAlgo, Signature, SignAlgo, MerkleRoot, MerkleIndex, AnchorReference). Field presence is not a signature or anchor confirmation.",
+      "invalid_count": 0,
+      "examples": []
+    },
+    "policy": {
+      "result": "VALID",
+      "detail": "All 40 events include PolicyID, a known ConformanceTier, RegistrationPolicy.Issuer, and VerificationDepth flags. This does not confirm that those policies were followed.",
+      "invalid_count": 0,
+      "examples": []
+    },
+    "signature": {
+      "result": "VALID",
+      "detail": "Every event signature verified as Ed25519 over that event's EventHash with the trusted key. 40 verified, 0 invalid, 0 unverifiable, using trusted key sha256:65ea2f698c8cd0750a274493b044fc31c4a5ec84db612ce05a1b48a0a2a9d051. Message encoding: raw_digest=40.",
+      "valid_count": 40,
+      "invalid_count": 0,
+      "unverifiable_count": 0,
+      "message_encodings": {
+        "raw_digest": 40
+      },
+      "examples": [],
+      "key_fingerprint": "sha256:65ea2f698c8cd0750a274493b044fc31c4a5ec84db612ce05a1b48a0a2a9d051"
+    },
+    "merkle_root": {
+      "result": "VALID",
+      "detail": "Recomputed VCP v1.1 Merkle root matches the supplied expected root. Computed with the VCP v1.1 tree (0x00 leaf prefix, 0x01 node prefix, odd node duplicated). Strict RFC 6962 §2.1 (power-of-two split) is reported separately and is not the verdict.",
+      "computed_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+      "rfc6962_strict_root": "4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3",
+      "expected_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+      "algorithm": "vcp-1.1-duplicate-odd-node"
+    },
+    "audit_path": {
+      "result": "VALID",
+      "detail": "All 40 stored audit paths reach the expected root, and each MerkleIndex matches the event's position in this file.",
+      "examples": [],
+      "invalid_count": 0,
+      "missing_count": 0
+    },
+    "batch_bounds": {
+      "result": "VALID",
+      "detail": "Published batch bounds match this file (EventCount=40, FirstSequence=1, LastSequence=40)."
+    },
+    "security_object_signature": {
+      "result": "VALID",
+      "detail": "Security object signature verified as Ed25519 over the raw Merkle root bytes (raw_digest) with the trusted key. This authenticates the published root. It is not an external anchor.",
+      "message_encoding": "raw_digest"
+    },
+    "external_anchor": {
+      "result": "UNVERIFIABLE",
+      "detail": "External anchor proof merkle_root.ots is not present, so the anchor was not confirmed. The anchor reference claims status ANCHORED via OpenTimestamps. That claim was not used as confirmation.",
+      "result_ja": "検証不能",
+      "anchor_checked": true,
+      "anchor_confirmed": false,
+      "proof_file": "merkle_root.ots",
+      "proof_path": "/workspace/evidence/04_anchor/merkle_root.ots",
+      "proof_present": false,
+      "claimed_status": "ANCHORED",
+      "claimed_provider": "OpenTimestamps",
+      "claimed_merkle_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e"
+    }
+  },
+  "unimplemented": [
+    "VCP v1.2 is not implemented. The spec version is fixed at v1.1.",
+    "Signature algorithms other than Ed25519 are not implemented.",
+    "Hash algorithms other than SHA-256 are not implemented.",
+    "Full RFC 8785 JSON Canonicalization Scheme is not implemented. EventHash uses sorted-key json.dumps concatenation, which matches this evidence pack.",
+    "External anchor confirmation (OpenTimestamps / Bitcoin) was not completed. A missing merkle_root.ots proof is not treated as confirmed, and this verifier does not synthesize an ots result."
+  ],
+  "findings": [
+    "external_anchor: External anchor proof merkle_root.ots is not present, so the anchor was not confirmed. The anchor reference claims status ANCHORED via OpenTimestamps. That claim was not used as confirmation."
+  ],
+  "generated_at": "2026-10-22T10:05:25.092010+00:00"
+}
