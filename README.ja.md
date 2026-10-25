@@ -2,7 +2,7 @@
 >
 > - 本リポジトリは、VeritasChain Standards Organization（VSO）を運営する VeritasChain株式会社によるファーストパーティの PoC（概念実証）コードです。対象は VCP v1.1（Silver ティア）です。VCP v1.1 にはタグ付きリリースがなく、VCP v1.2（Released、タグ `v1.2.0`）に置き換えられています。
 > - いずれの VCP ティアへの適合も、VAP への適合も、独立に確立されていません。VAP およびそのプロファイル（VCP を含む）の外部実装は現時点でゼロです。
-> - 認証は受けていません。VSO は証明書を発行しません。認証スキームは、スキームオーナーから独立した適合性評価機関（CAB）を要件としていますが、登録済みの唯一の CAB である VeritasChain株式会社は独立していません（VAP v1.2 ERRATA E-2026-10-21）。
+> - 認証は受けていません。VSO は認証を直接発行しません。認証スキームは、スキームオーナーから独立した適合性評価機関（CAB）を要件としていますが、登録済みの唯一の CAB である VeritasChain株式会社は独立していません（VAP v1.2 ERRATA E-2026-10-21）。
 > - 既知の制約：`evidence/04_anchor/anchor_reference.json` が参照する OpenTimestamps 証明ファイル（`merkle_root.ots`）は本リポジトリに含まれていないため、アンカーをリポジトリから確認できません。`tools/verifier/vcp_verifier.py` は Ed25519 署名も OpenTimestamps 証明も検証しません。Merkle 構築は奇数個のレベルで末尾ノードを複製します（RFC 6962 のハッシュ接頭辞は使っていますが、RFC 6962 の木構築アルゴリズムではありません）。
 > - エビデンスパック（`evidence/`）内の文言（`verification_report.txt` や `evidence_index.json` の "Fully Compliant" など）は本訂正より前のもので、変更していません。結果ではなく設計目標として読んでください。
 

@@ -2,7 +2,7 @@
 >
 > - This is first-party proof-of-concept code by VeritasChain Co., Ltd., which operates the VeritasChain Standards Organization (VSO). It targets VCP v1.1 (Silver tier). VCP v1.1 has no tagged release and is superseded by VCP v1.2 (Released, tag `v1.2.0`).
 > - Conformance to any VCP tier, or to VAP, has not been independently established. There are zero external implementations of VAP or any of its profiles, including VCP.
-> - Not certified. VSO does not issue certificates. The certification scheme requires a Conformity Assessment Body (CAB) independent of the scheme owner; the only registered CAB, VeritasChain Co., Ltd., is not independent (VAP v1.2 ERRATA E-2026-10-21).
+> - Not certified. VSO does not issue certifications itself. The certification scheme requires a Conformity Assessment Body (CAB) independent of the scheme owner; the only registered CAB, VeritasChain Co., Ltd., is not independent (VAP v1.2 ERRATA E-2026-10-21).
 > - Known limitations: `evidence/04_anchor/anchor_reference.json` refers to an OpenTimestamps proof file (`merkle_root.ots`) that is not in this repository, so the anchor cannot be checked from the repository. `tools/verifier/vcp_verifier.py` does not verify the Ed25519 signatures or any OpenTimestamps proof. The Merkle builder duplicates the last node at odd-sized levels; it uses the RFC 6962 hash prefixes but not the RFC 6962 tree algorithm.
 > - Texts inside the evidence pack (`evidence/`, for example "Fully Compliant" in `verification_report.txt` and `evidence_index.json`) predate this correction and are left unchanged. Read them as design targets, not results.
 
