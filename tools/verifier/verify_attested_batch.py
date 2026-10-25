@@ -117,6 +117,9 @@ def check_signature(envelope: Any, public_key: Optional[bytes]) -> dict:
         return check(INVALID, "MALFORMED_SUPPLEMENTAL_ENVELOPE")
     if not isinstance(public_key, bytes) or len(public_key) != 32:
         return check(INDETERMINATE, "SUPPLEMENTAL_TRUSTED_KEY_MISSING_OR_UNUSABLE")
+    problem = legacy.ed25519_public_key_problem(public_key)
+    if problem is not None:
+        return check(INDETERMINATE, "SUPPLEMENTAL_TRUSTED_KEY_REJECTED:" + problem)
     if legacy.Ed25519PublicKey is None:
         return check(INDETERMINATE, "ED25519_DEPENDENCY_UNAVAILABLE")
     try:
