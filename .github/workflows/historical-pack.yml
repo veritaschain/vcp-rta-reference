@@ -1,0 +1,93 @@
+name: Historical pack replay
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: historical-pack-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  historical-pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13.5']
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install direct test dependencies
+        run: python -m pip install -r requirements-verifier-test.txt
+      - name: Replay fixed historical bytes without claiming full verification
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+          PYTHONHASHSEED: '0'
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path('tools/verifier').resolve()))
+          import run_regression as runner
+          output = Path(os.environ['RUNNER_TEMP']) / 'historical-pack'
+          output.mkdir(exist_ok=False)
+          before, head = runner.input_manifest(runner.ROOT), runner.git_head(runner.ROOT)
+          env = os.environ.copy()
+          env.pop('PYTEST_ADDOPTS', None)
+          env.pop('PYTEST_PLUGINS', None)
+          command = [sys.executable, '-m', 'pytest', '-q', '--strict-config', '--strict-markers',
+                     '-o', 'addopts=', '--junitxml=' + str(output / 'historical.xml'),
+                     'tests/test_historical_evidence.py']
+          with (output / 'pytest.log').open('wb') as log:
+              process = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                       timeout=120, check=False)
+          result = runner.assess_junit(output / 'historical.xml', process.returncode,
+                                      {'test_historical_evidence': 15})
+          with (output / 'historical-pack.json').open('wb') as report:
+              replay = subprocess.run([sys.executable, 'tools/verifier/inspect_historical_pack.py',
+                                       '--compare-reference-key'], stdout=report, timeout=60, check=False)
+          result['replay_exit'] = replay.returncode
+          result['executed_commit'] = head
+          result['inputs_before_sha256'] = before
+          result['inputs_after_sha256'] = runner.input_manifest(runner.ROOT)
+          result['inputs_unchanged'] = before == result['inputs_after_sha256']
+          result['head_unchanged'] = head == runner.git_head(runner.ROOT)
+          result['expected_evidence_verdict'] = 'INDETERMINATE'
+          result['scope'] = 'First-party fixed-pack regression, not identity trust, conformance or independent reproduction'
+          (output / 'assessment.json').write_text(json.dumps(result, indent=2) + '\n')
+          manifest = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in output.iterdir() if p.is_file()}
+          (output / 'artifacts.sha256.json').write_text(json.dumps(manifest, indent=2) + '\n')
+          print(json.dumps({k: v for k, v in result.items() if not k.startswith('inputs_')}, indent=2))
+          if not result['passed'] or replay.returncode != 2 or not result['inputs_unchanged'] or not result['head_unchanged']:
+              raise SystemExit(1)
+          report = json.loads((output / 'historical-pack.json').read_text())
+          if report['evidence_verdict'] != 'INDETERMINATE' or report['execution_status'] != 'completed':
+              raise SystemExit(1)
+          PY
+      - name: Retain read-only replay reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: historical-pack-python-${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/historical-pack/historical-pack.json
+            ${{ runner.temp }}/historical-pack/historical.xml
+            ${{ runner.temp }}/historical-pack/pytest.log
+            ${{ runner.temp }}/historical-pack/assessment.json
+            ${{ runner.temp }}/historical-pack/artifacts.sha256.json
+          if-no-files-found: error
+          retention-days: 30

@@ -1,167 +1,99 @@
-# VCP v1.1 Verification Guide
+# Current verification guide for the legacy evidence pack
 
-This guide verifies cryptographic integrity and completeness guarantees as defined in VCP v1.1, corresponding to the publicly released Evidence Pack.
+Updated 26 October 2026. This guide describes executable tools, not a normative
+VCP/VAP conformance assessment. It replaces the obsolete all-pass checklist.
+Historical logs, signatures and reports under `evidence/` remain unchanged.
 
-Third parties can independently reproduce all verification steps without requiring access to the original trading system.
+## 1. Establish the revision and install test dependencies
 
----
-
-## Prerequisites
-
-- Python 3.8 or higher
-- Git (for cloning the repository)
-- No external libraries required (standard library only)
-
----
-
-## Verification Steps
-
-### Step 1: Obtain the Repository
-
-```bash
+```sh
 git clone https://github.com/veritaschain/vcp-rta-reference.git
 cd vcp-rta-reference
+git rev-parse HEAD
+python -m pip install -r requirements-verifier-test.txt
 ```
 
-### Step 2: Review the Evidence Index
+For reproducible work, record the exact commit. Python 3.11 and 3.13.5 are
+exercised by the current CI workflows. The direct dependency pins do not freeze
+the whole OS or transitive dependency set. See [REPRODUCING.md](../tools/verifier/REPRODUCING.md).
 
-```bash
-cat evidence/evidence_index.json
+## 2. Run without assuming key trust
+
+```sh
+python tools/verifier/vcp_verifier.py evidence/01_trade_logs/vcp_rta_events.jsonl \
+  -s evidence/04_anchor/security_object.json --json
 ```
 
-This displays:
-- VCP version: 1.1
-- Tier: Silver
-- Event count and date range
-- Merkle Root
+Missing trusted keys produce `INDETERMINATE` for signature checks. The program
+continues checking hashes, sequences, local bounds and inclusion paths. It does
+not establish key ownership from `public_key.json` or an embedded key.
 
-### Step 3: Verify Chain Integrity
+Only after establishing a key through a separate trust process should it be
+supplied to the default verifier with `--public-key /trusted/key.json`.
+The historical pack uses `raw_digest` signatures. `ascii_hex` is a separate,
+explicit legacy encoding option; it is not guessed until something passes.
 
-**Linux / macOS:**
-```bash
-python tools/verifier/vcp_verifier.py \
-    evidence/01_trade_logs/vcp_rta_events.jsonl \
-    -s evidence/04_anchor/security_object.json
+## 3. Replay the fixed public corpus
+
+```sh
+python tools/verifier/inspect_historical_pack.py
+python tools/verifier/inspect_historical_pack.py --compare-reference-key
 ```
 
-**Windows:**
-```cmd
-python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json
+The second command explicitly compares signatures to the published reference
+key. It tests mathematics, **not the key owner's identity or independent trust**.
+It pins the original four core files by Git blob ID and records SHA-256 hashes
+of the complete evidence directory before and after reading it.
+
+For the recorded baseline, all 40 event hashes and signatures, the root signature,
+and all inclusion paths match. Local sequence and bounds comparisons also match.
+The overall result remains **INDETERMINATE**, with unresolved `prev_hash`,
+`authenticated_batch_metadata` and `external_anchor` checks. The first record's
+chain boundary is unavailable; root-only signatures do not authenticate metadata;
+the original `.ots` proof is absent. Full schema verification is not implemented.
+The [dated replay record](../tools/verifier/HISTORICAL.md) gives roots and CI evidence.
+
+Exit 1 means a demonstrated mismatch; exit 2 means incomplete verification;
+exit 3 means inspection/input failure. A successful CI regression reproducing
+exit 2 is **not** a successful overall evidence-verification verdict.
+The new inspector writes only to standard output. Do not redirect reports over
+original evidence, keys or source files.
+
+## 4. Run current regression tests
+
+```sh
+python tools/verifier/run_regression.py
+python -m pytest -q tests/test_historical_evidence.py
 ```
 
-**Verification items (Three-Layer Architecture):**
+The first command retains the existing 250-case regression baseline. The second
+runs 15 fixed-pack cases, including first/middle/last payload tampering, wrong-key
+verification, missing paths with a bad signature, CLI behavior, byte preservation
+and rejection of an altered baseline. Mutations use memory copies or temporary
+files, never the original evidence directory.
 
-| Layer | Check | Method |
-|-------|-------|--------|
-| Layer 1: Event Integrity | Event hash | SHA-256 recomputation |
-| Layer 1: Event Integrity | Sequence continuity | Sequential number check |
-| Layer 1: Event Integrity | PrevHash chain | Hash linking verification |
-| Layer 2: Collection Integrity | Merkle Root | RFC 6962 tree rebuild |
-| Layer 3: External Verifiability | Anchor reference | Presence check |
+The scripts and results under `evidence/03_tamper_detection/` are historical
+artifacts, not the current test suite and not a basis for a compliance claim.
 
-### Step 4: Run Tamper Detection Test
+## 5. Optional supplemental attestation
 
-**Linux / macOS:**
-```bash
-python evidence/03_tamper_detection/tamper_detection_test.py
-```
+The separate [supplemental verifier](../tools/verifier/SUPPLEMENTAL.md) can
+verify a new signed batch statement and its actual RFC 3161 response. Caller
+keys, CA bundle, policy and context must be supplied explicitly. It does not
+recover the missing original OpenTimestamps proof and cannot retroactively
+establish the original creation or anchoring time.
 
-**Windows:**
-```cmd
-python evidence\03_tamper_detection\tamper_detection_test.py
-```
+No timestamp service is contacted by these commands. No signatures or proofs
+are created. Revocation, freshness, historical certificate validity, complete
+schema assessment and independent reproduction remain outside the stated results.
 
-This test simulates the following attack scenarios:
-1. **Omission Attack** - Event deletion
-2. **Modification Attack** - Event content alteration
-3. **Insertion Attack** - Fake event injection
+## Interpreting reports
 
-Verify that all cases report **[DETECTED]**.
+Read per-check names, reasons and scope, not just the overall label. Historical
+JSON concatenation is not RFC 8785 JCS. The duplicate-odd Merkle construction is
+not strict RFC 6962 MTH. A local match to a producer-supplied root is not an
+independent anchor; a matching root signature is not authenticated count/range/
+policy metadata; an event not recorded in the first place cannot be recovered
+by replaying the supplied records.
 
-### Step 5: Manually Verify Tampered Sample
-
-**Linux / macOS:**
-```bash
-python tools/verifier/vcp_verifier.py \
-    evidence/03_tamper_detection/tampered_chain.jsonl \
-    -s evidence/04_anchor/security_object.json
-```
-
-**Windows:**
-```cmd
-python tools\verifier\vcp_verifier.py evidence\03_tamper_detection\tampered_chain.jsonl -s evidence\04_anchor\security_object.json
-```
-
-Verifying the tampered file **should report errors** (FAIL is the correct result).
-
----
-
-## Verification Checklist
-
-| Item | Expected Result |
-|------|-----------------|
-| Event count | 40 |
-| Valid events | 40 |
-| Sequence continuity | PASS |
-| PrevHash integrity | PASS |
-| Merkle Root (RFC 6962) | PASS |
-| Tampered sample verification | FAIL (detection successful) |
-
----
-
-## External Anchor Verification
-
-Silver Tier requires external anchoring. To verify:
-
-1. Review `evidence/04_anchor/anchor_reference.json`
-2. Note the `MerkleRoot` value
-3. Submit to OpenTimestamps for independent verification
-4. Verify timestamp with the .ots proof file (if available)
-
-**Anchor Target:** OpenTimestamps (Bitcoin-backed)
-
----
-
-## Understanding Verification Results
-
-### PASS Results
-- **Event Hash: PASS** - All events have valid SHA-256 hashes
-- **Sequence: PASS** - No gaps in event numbering
-- **PrevHash: PASS** - Hash chain is unbroken
-- **Merkle Root: PASS** - Computed root matches stored root
-
-### FAIL Results (Expected for Tampered Data)
-When verifying `tampered_chain.jsonl`:
-- **Sequence error** - Missing event detected
-- **PrevHash mismatch** - Chain broken by omission
-- **Merkle Root mismatch** - Tree integrity violated
-
-**Important:** FAIL on tampered data confirms the detection system works correctly.
-
----
-
-## Troubleshooting
-
-### Python version issues
-```bash
-python3 --version  # Must be 3.8 or higher
-```
-
-### Encoding issues (Windows)
-```cmd
-set PYTHONIOENCODING=utf-8
-```
-
-### Encoding issues (Linux/macOS)
-```bash
-export PYTHONIOENCODING=utf-8
-```
-
-### Hash mismatch on legitimate data
-Ensure you are using the unmodified evidence files from the repository.
-
----
-
-## Contact
-
-For verification questions, contact the VeritasChain Standards Organization.
+Questions: standards@veritaschain.org, VeritasChain Standards Organization (VSO).
