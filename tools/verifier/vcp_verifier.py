@@ -4,6 +4,7 @@
 Not a VCP/VAP conformance verifier. The historical JSON/hash and duplicate-odd
 Merkle construction are preserved, not relabelled RFC 8785/RFC 6962 compliant.
 An unavailable check never passes. Evidence files do not supply trusted keys.
+See INPUT_LIMITS.md for local file and JSON resource limits.
 """
 from __future__ import annotations
 
@@ -11,11 +12,15 @@ import argparse
 import base64
 import binascii
 import hashlib
+import io
 import json
+import math
 import os
 import re
+import stat
 import sys
 import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -33,6 +38,12 @@ INDETERMINATE = "INDETERMINATE"
 EXIT_CODES = {VALID: 0, INVALID: 1, INDETERMINATE: 2}
 HEX64 = re.compile(r"[0-9a-fA-F]{64}\Z")
 MISSING = object()
+# Local resource policy, not protocol/schema limits. Never truncate input.
+MAX_EVENT_FILE_BYTES = 32 * 1024 * 1024
+MAX_JSON_BYTES = 2 * 1024 * 1024
+MAX_KEY_FILE_BYTES = 64 * 1024
+MAX_EVENT_COUNT = 100000
+MAX_JSON_DEPTH = 64
 ExternalVerifier = Callable[[str, Dict[str, Any]], Dict[str, str]]
 
 
@@ -404,15 +415,92 @@ def _unique_object(pairs: List[Any]) -> Dict[str, Any]:
     return result
 
 
+def _finite_float(token: str) -> float:
+    value = float(token)
+    if not math.isfinite(value):
+        raise ValueError("Non-finite JSON number")
+    return value
+
+
 def _json(text: str) -> Any:
-    return json.loads(text, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    # Check resource limits before the recursive decoder allocates containers.
+    if len(text) > MAX_JSON_BYTES or len(text.encode("utf-8")) > MAX_JSON_BYTES:
+        raise ValueError("JSON document exceeds byte limit")
+    depth = 0
+    quoted = escaped = False
+    for char in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                raise ValueError("JSON document exceeds nesting limit")
+        elif char in "]}":
+            depth -= 1
+    return json.loads(text, object_pairs_hook=_unique_object,
+                      parse_constant=_reject_constant, parse_float=_finite_float)
+
+
+@contextmanager
+def _regular_input(filepath: str, limit: int):
+    """Open a bounded regular file, not a pipe/device. No filesystem deadline.
+
+    The path precheck avoids opening known special files; fstat rechecks the
+    actual descriptor after open. O_NONBLOCK prevents a raced-in POSIX FIFO
+    from waiting for a writer. Symlinks to regular files remain supported.
+    """
+    if not stat.S_ISREG(os.stat(filepath).st_mode):
+        raise ValueError("Input must be a regular file")
+    flags = (os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
+             | getattr(os, "O_NOCTTY", 0) | getattr(os, "O_BINARY", 0))
+    fd = os.open(filepath, flags)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("Input must be a regular file")
+        if info.st_size > limit:
+            raise ValueError("Input exceeds byte limit")
+        handle = os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
+    with handle:
+        yield handle
+
+
+def _read_regular(filepath: str, limit: int) -> bytes:
+    with _regular_input(filepath, limit) as handle:
+        # The read limit also covers growth and misleading stat sizes.
+        data = handle.read(limit + 1)
+    if len(data) > limit:
+        raise ValueError("Input exceeds byte limit")
+    return data
 
 
 def load_events(filepath: str) -> List[Dict[str, Any]]:
+    raw = _read_regular(filepath, MAX_EVENT_FILE_BYTES)
     events = []
-    with open(filepath, encoding="utf-8") as handle:
-        for number, line in enumerate(handle, 1):
+    # Preserve the old text reader's LF/CRLF/CR behavior, not str.splitlines()
+    # (which also splits on Unicode characters valid inside JSON strings).
+    with io.StringIO(raw.decode("utf-8"), newline=None) as handle:
+        number = 0
+        while True:
+            line = handle.readline(MAX_JSON_BYTES + 1)
+            if not line:
+                break
+            number += 1
+            if len(line) > MAX_JSON_BYTES or len(line.encode("utf-8")) > MAX_JSON_BYTES:
+                raise ValueError("Event line exceeds byte limit")
             if line.strip():
+                if len(events) >= MAX_EVENT_COUNT:
+                    raise ValueError("Event count exceeds local limit")
                 item = _json(line)
                 if not isinstance(item, dict):
                     raise ValueError("Event on line %d is not an object" % number)
@@ -421,7 +509,7 @@ def load_events(filepath: str) -> List[Dict[str, Any]]:
 
 
 def load_security_object(filepath: str) -> Dict[str, Any]:
-    item = _json(Path(filepath).read_text(encoding="utf-8"))
+    item = _json(_read_regular(filepath, MAX_JSON_BYTES).decode("utf-8"))
     if not isinstance(item, dict):
         raise ValueError("Security object must be a JSON object")
     return item
@@ -429,7 +517,7 @@ def load_security_object(filepath: str) -> Dict[str, Any]:
 
 def load_public_key(filepath: str) -> bytes:
     """Trust is an explicit caller decision, not inferred from an evidence file."""
-    raw = Path(filepath).read_bytes()
+    raw = _read_regular(filepath, MAX_KEY_FILE_BYTES)
     if len(raw) == 32:
         return raw
     text = raw.decode("utf-8").strip()
