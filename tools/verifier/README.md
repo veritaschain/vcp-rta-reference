@@ -5,6 +5,15 @@ specification revision, VCP/VAP conformance, certification, or independent repro
 It replaces the old default CLI's silent signature/anchor skips and false all-pass result.
 The separate `cursor/vcp-verifier-three-valued-faf6` branch is not merged by this change.
 
+## Opt-in supplemental verification
+
+A separate executable, [verify_attested_batch.py](verify_attested_batch.py), now
+adds signed batch-metadata binding and offline RFC 3161 token verification.
+See [SUPPLEMENTAL.md](SUPPLEMENTAL.md) for its byte contract, trust inputs,
+commands and limitations. It is an implementation extension, not VCP/VAP
+adoption. The default CLI described below is unchanged. New supplemental
+proofs cannot establish an original logging/anchoring time retroactively.
+
 ## Run
 
 Python 3.8+ is required. `cryptography` enables Ed25519 checks. Without it,
