@@ -12,8 +12,10 @@ import base64
 import binascii
 import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -450,13 +452,47 @@ def render_report(report: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def write_new_report(filepath: str, text: str, *, protected_paths=()) -> None:
+    """Publish complete UTF-8 output without replacing any existing entry.
+
+    Use a caller-controlled directory on a filesystem supporting hard links.
+    Publication fails closed if that facility is unavailable. This does not
+    protect against hostile directory owners or shell redirection before startup.
+    """
+    destination = Path(filepath)
+    # Include missing optional inputs: an output must not create a substitute
+    # for a requested-but-unavailable evidence, key or timestamp file.
+    resolved = destination.resolve()
+    if any(resolved == Path(path).resolve() for path in protected_paths if path):
+        raise ValueError("Report output aliases an input path")
+    if os.path.lexists(destination):
+        raise FileExistsError("Report output already exists; choose a new path")
+    data = text.encode("utf-8")
+    staged = None
+    try:
+        # mkstemp-backed creation uses mode 0600 on POSIX. Nothing is published
+        # at the destination until writing, flush and fsync have all succeeded.
+        with tempfile.NamedTemporaryFile(mode="wb", prefix=".vcp-report-", suffix=".tmp",
+                                         dir=destination.parent, delete=False) as handle:
+            staged = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Unlike rename/replace, link cannot overwrite an existing destination,
+        # including a symlink created after the preliminary existence check.
+        os.link(staged, destination, follow_symlinks=False)
+    finally:
+        if staged is not None:
+            staged.unlink()
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("events_file")
     parser.add_argument("--security-object", "-s")
     parser.add_argument("--public-key", help="File containing an explicitly trusted Ed25519 key")
     parser.add_argument("--signature-message", choices=("raw_digest", "ascii_hex"), default="raw_digest")
-    parser.add_argument("--output", "-o")
+    parser.add_argument("--output", "-o", help="New report path only; never overwrites")
     parser.add_argument("--json", action="store_true", help="Emit report format version 2")
     args = parser.parse_args(argv)
     try:
@@ -485,8 +521,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(text, end="")
     if args.output:
         try:
-            Path(args.output).write_text(text, encoding="utf-8")
-        except OSError as exc:
+            write_new_report(args.output, text, protected_paths=(
+                args.events_file, args.security_object, args.public_key))
+        except (OSError, ValueError, RuntimeError) as exc:
             print("Cannot write report: " + str(exc), file=sys.stderr)
             return 3
     return EXIT_CODES[report["status"]]

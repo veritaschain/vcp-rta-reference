@@ -312,7 +312,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--tsa-untrusted")
     parser.add_argument("--tsa-policy-oid")
     parser.add_argument("--json", action="store_true")
-    parser.add_argument("--output", "-o")
+    parser.add_argument("--output", "-o", help="New report path only; never overwrites")
     args = parser.parse_args(argv)
     try:
         events = legacy.load_events(args.events_file)
@@ -343,8 +343,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(text, end="")
     if args.output:
         try:
-            Path(args.output).write_text(text, encoding="utf-8")
-        except OSError as exc:
+            legacy.write_new_report(args.output, text, protected_paths=(
+                args.events_file, args.security_object, args.public_key, args.attestation,
+                args.attestor_key, args.tsa_response, args.tsa_ca_file, args.tsa_untrusted))
+        except (OSError, ValueError, RuntimeError) as exc:
             print("Cannot write report: " + str(exc), file=sys.stderr)
             return 3
     return legacy.EXIT_CODES[report["status"]]
