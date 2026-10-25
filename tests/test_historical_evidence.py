@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools/verifier"))
@@ -89,10 +90,23 @@ def test_missing_path_still_detects_bad_root_signature():
 
 
 def test_whole_pack_wrong_key_rejected():
-    events, record, _ = history.load_fixed_pack(ROOT)
-    report = legacy.verify_chain(events, record, b"\x00" * 32)
+    events, record, reference_key = history.load_fixed_pack(ROOT)
+    # A valid but unrelated key must still demonstrate signature mismatch.
+    # The previous all-zero fixture is an inadmissible small-order point.
+    wrong_key = Ed25519PrivateKey.from_private_bytes(b"\xff" * 32).public_key().public_bytes_raw()
+    assert wrong_key != reference_key
+    assert legacy.ed25519_public_key_problem(wrong_key) is None
+    before = copy.deepcopy((events, record))
+    report = legacy.verify_chain(events, record, wrong_key)
     assert report["checks"]["event_signatures"]["status"] == legacy.INVALID
+    assert report["checks"]["anchor_signature"]["status"] == legacy.INVALID
     assert report["status"] == legacy.INVALID
+    # Retain the original zero-key case, now explicitly as unusable trust input.
+    unusable = legacy.verify_chain(events, record, b"\x00" * 32)
+    assert unusable["checks"]["event_signatures"]["status"] == legacy.INDETERMINATE
+    assert unusable["checks"]["anchor_signature"]["reason"] == "TRUSTED_KEY_REJECTED:NON_PRIME_ORDER_POINT"
+    assert unusable["status"] == legacy.INDETERMINATE
+    assert (events, record) == before
 
 
 def test_changed_fixed_bytes_rejected(tmp_path):
