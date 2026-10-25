@@ -2,7 +2,7 @@
 
 ## Overview
 
-VCP v1.1 employs a three-layer architecture to ensure complete integrity of trading logs. Each layer provides distinct guarantees that combine to create a cryptographically verifiable audit trail.
+VCP v1.1 employs a three-layer architecture to make tampering with trading logs detectable. Each layer provides a distinct verification mechanism; together they create a tamper-evident, cryptographically verifiable audit trail.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -146,7 +146,7 @@ Each event may reference the previous event's hash:
 Event 1 ──PrevHash──> Event 2 ──PrevHash──> Event 3
 ```
 
-**v1.1 change:** PrevHash is now OPTIONAL. Merkle Tree provides equivalent completeness guarantees.
+**v1.1 change:** PrevHash is now OPTIONAL. The Merkle Tree, once anchored, makes post-anchor omission detectable at anchor granularity.
 
 ---
 
@@ -188,7 +188,7 @@ Anchors Merkle Root to external services for third-party verification:
 | External Anchor | Optional | **Silver: Required** |
 | Policy Identification | None | **Required** |
 | PrevHash | Required | Optional |
-| Completeness Guarantees | None | **Available** |
+| Completeness (omission detection) | None | **Available** |
 | Dual Timestamp Format | None | **Required** |
 | RFC 6962 Compliance | None | **Required** |
 

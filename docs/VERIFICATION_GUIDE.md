@@ -1,6 +1,6 @@
 # VCP v1.1 Verification Guide
 
-This guide verifies cryptographic integrity and completeness guarantees as defined in VCP v1.1, corresponding to the publicly released Evidence Pack.
+This guide verifies cryptographic integrity and the completeness checks defined in VCP v1.1 (post-anchor omission is detectable at anchor granularity), corresponding to the publicly released Evidence Pack. See the status correction of 25 October 2026 in the [README](../README.md): the verifier does not check signatures or the OpenTimestamps proof, and the `.ots` file is not in the repository.
 
 Third parties can independently reproduce all verification steps without requiring access to the original trading system.
 

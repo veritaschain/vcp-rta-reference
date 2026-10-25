@@ -1,3 +1,11 @@
+> **Status correction — 25 October 2026**
+>
+> - This is first-party proof-of-concept code by VeritasChain Co., Ltd., which operates the VeritasChain Standards Organization (VSO). It targets VCP v1.1 (Silver tier). VCP v1.1 has no tagged release and is superseded by VCP v1.2 (Released, tag `v1.2.0`).
+> - Conformance to any VCP tier, or to VAP, has not been independently established. There are zero external implementations of VAP or any of its profiles, including VCP.
+> - Not certified. VSO does not issue certificates. The certification scheme requires a Conformity Assessment Body (CAB) independent of the scheme owner; the only registered CAB, VeritasChain Co., Ltd., is not independent (VAP v1.2 ERRATA E-2026-10-21).
+> - Known limitations: `evidence/04_anchor/anchor_reference.json` refers to an OpenTimestamps proof file (`merkle_root.ots`) that is not in this repository, so the anchor cannot be checked from the repository. `tools/verifier/vcp_verifier.py` does not verify the Ed25519 signatures or any OpenTimestamps proof. The Merkle builder duplicates the last node at odd-sized levels; it uses the RFC 6962 hash prefixes but not the RFC 6962 tree algorithm.
+> - Texts inside the evidence pack (`evidence/`, for example "Fully Compliant" in `verification_report.txt` and `evidence_index.json`) predate this correction and are left unchanged. Read them as design targets, not results.
+
 ## 🔗 Related Reference Implementations (Other Platforms)
 
 ### cTrader
@@ -35,12 +43,12 @@
 [**English**](README.md) | [日本語](README.ja.md)
 
 ![VCP v1.1](https://img.shields.io/badge/VCP-v1.1-blue)
-![Tier Silver](https://img.shields.io/badge/Tier-Silver-silver)
+![Non-certified PoC](https://img.shields.io/badge/Status-Non--certified_PoC-orange)
 ![License CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)
 
 > **"Verify, Don't Trust."**
 
-VCP-RTA is a reference implementation demonstrating **VCP v1.1 Silver Tier** compliance for algorithmic trading systems. This repository provides a complete, verifiable evidence pack that third parties can independently validate.
+VCP-RTA is a proof of concept for algorithmic trading audit trails that targets **VCP v1.1 Silver Tier**; Silver conformance has not been established. This repository provides an evidence pack whose hash, sequence and Merkle-root checks third parties can reproduce (see the status correction above for what is not checked).
 
 📄 **A detailed "World's First" Evidence Report documenting independent prior-art analyses is included in this repository.**
 
@@ -48,7 +56,7 @@ VCP-RTA is a reference implementation demonstrating **VCP v1.1 Silver Tier** com
 
 ## Overview
 
-This Evidence Pack demonstrates a production-grade implementation of VCP in a live MT5 environment. The implementation captures AI-driven trading decisions and execution events using a non-invasive sidecar architecture that operates independently of the core trading platform.
+This Evidence Pack demonstrates a PoC implementation of VCP in a live MT5 environment. The implementation captures AI-driven trading decisions and execution events using a non-invasive sidecar architecture that operates independently of the core trading platform.
 
 AI decision signals, order lifecycle events, and execution outcomes are recorded externally, cryptographically hashed, organized into Merkle trees, and anchored to enable independent third-party verification.
 
@@ -62,9 +70,9 @@ AI decision signals, order lifecycle events, and execution outcomes are recorded
 | **External Anchor (Silver)** | OPTIONAL | **REQUIRED** |
 | **Policy Identification** | - | **REQUIRED** |
 | **PrevHash** | REQUIRED | OPTIONAL |
-| **Completeness Guarantees** | - | ✅ NEW |
+| **Completeness (omission detection)** | - | ✅ NEW |
 
-> **v1.1 Core Enhancement:** Extends tamper-evidence to **completeness guarantees** — third parties can now verify not only that events were not altered, but that **no required events were omitted**.
+> **v1.1 Core Enhancement:** Extends tamper-evidence to completeness: post-anchor omission is detectable at anchor granularity. This does not show that every real-world event was captured before anchoring.
 
 ---
 
@@ -157,7 +165,7 @@ Verification complete: All checks passed
 | **Signal Events** | 20 |
 | **Order Events** | 20 |
 | **VCP Version** | 1.1 |
-| **Tier** | Silver |
+| **Target tier** | Silver (not established) |
 
 ### Anonymization
 
@@ -196,7 +204,7 @@ This evidence pack is licensed under [CC BY 4.0](https://creativecommons.org/lic
 
 The `examples/` directory contains reference implementations for integrating VCP into your own systems:
 
-- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events with VCP v1.1 compliance
+- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events, targeting VCP v1.1 (conformance not established)
 
 ---
 
