@@ -22,6 +22,7 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -206,6 +207,73 @@ def check_policy(events: List[Any]) -> Dict[str, str]:
     return combine(results)
 
 
+def ed25519_public_key_problem(public_key: Any) -> Optional[str]:
+    """Validate public key material, not identity/trust. Never handles secrets.
+
+    Require a canonical nonidentity point in the prime-order subgroup. This
+    is a local key-admission policy; signature verification stays in OpenSSL.
+    Only immutable 32-byte values reach the bounded cache.
+    """
+    if type(public_key) is not bytes or len(public_key) != 32:
+        return "KEY_TYPE_OR_LENGTH"
+    return _ed25519_point_problem(public_key)
+
+
+@lru_cache(maxsize=128)
+def _ed25519_point_problem(raw: bytes) -> Optional[str]:
+    """Public-data arithmetic from RFC 8032 sections 5.1.3 and 5.1.4.
+
+    Fixed-size input and fixed public scalar L. Not a signing implementation
+    or constant-time secret-scalar primitive. Cache hits do not establish trust.
+    """
+    p = (1 << 255) - 19
+    order = (1 << 252) + 27742317777372353535851937790883648493
+    d = (-121665 * pow(121666, p - 2, p)) % p
+    encoded = int.from_bytes(raw, "little")
+    sign, y = encoded >> 255, encoded & ((1 << 255) - 1)
+    if y >= p:
+        return "NONCANONICAL_POINT"
+    y2 = y * y % p
+    denominator = (d * y2 + 1) % p
+    if denominator == 0:
+        return "POINT_NOT_ON_CURVE"
+    x2 = ((y2 - 1) * pow(denominator, p - 2, p)) % p
+    x = pow(x2, (p + 3) // 8, p)
+    if x * x % p != x2:
+        x = x * pow(2, (p - 1) // 4, p) % p
+    if x * x % p != x2:
+        return "POINT_NOT_ON_CURVE"
+    if x == 0 and sign:
+        return "NONCANONICAL_POINT"
+    if (x & 1) != sign:
+        x = p - x
+    if x == 0 and y == 1:
+        return "IDENTITY_POINT"
+
+    def add(left, right):
+        x1, y1, z1, t1 = left
+        x2_, y2_, z2, t2 = right
+        a = (y1 - x1) * (y2_ - x2_) % p
+        b = (y1 + x1) * (y2_ + x2_) % p
+        c = 2 * d * t1 * t2 % p
+        dd = 2 * z1 * z2 % p
+        e, f, g, h = b - a, dd - c, dd + c, b + a
+        return (e * f % p, g * h % p, f * g % p, e * h % p)
+
+    # Complete extended-coordinate addition avoids hundreds of inversions.
+    total, multiple = (0, 1, 1, 0), (x, y, 1, x * y % p)
+    scalar = order
+    while scalar:
+        if scalar & 1:
+            total = add(total, multiple)
+        multiple = add(multiple, multiple)
+        scalar >>= 1
+    xx, yy, zz, _ = total
+    if zz == 0 or xx != 0 or (yy - zz) % p != 0:
+        return "NON_PRIME_ORDER_POINT"
+    return None
+
+
 def verify_digest_signature(signature: Any, digest: Any, algorithm: Any,
                             public_key: Optional[bytes], encoding: str) -> Dict[str, str]:
     if algorithm != "ED25519":
@@ -214,6 +282,9 @@ def verify_digest_signature(signature: Any, digest: Any, algorithm: Any,
         return check(INDETERMINATE, "TRUSTED_KEY_MISSING")
     if not isinstance(public_key, bytes) or len(public_key) != 32:
         return check(INDETERMINATE, "TRUSTED_KEY_UNUSABLE")
+    problem = ed25519_public_key_problem(public_key)
+    if problem is not None:
+        return check(INDETERMINATE, "TRUSTED_KEY_REJECTED:" + problem)
     if signature is None or signature == "":
         return check(INDETERMINATE, "SIGNATURE_MISSING")
     if not _hex(digest):
