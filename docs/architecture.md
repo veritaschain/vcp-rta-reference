@@ -1,202 +1,81 @@
-# VCP v1.1 Three-Layer Architecture
+# Legacy evidence verification architecture
 
-## Overview
+Informative implementation description, updated 26 October 2026.
+The earlier three-layer design narrative is preserved in
+[Git history at the pre-replay baseline](https://github.com/veritaschain/vcp-rta-reference/blob/6818bf3d08f8c24b31798d8ab0f0a60af8c22b4b/docs/architecture.md).
+It must not be read as evidence that every layer was independently verified.
+This page changes no VCP/VAP requirement or historical signed bytes.
 
-VCP v1.1 employs a three-layer architecture to ensure complete integrity of trading logs. Each layer provides distinct guarantees that combine to create a cryptographically verifiable audit trail.
+## Inputs and trust
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│  LAYER 3: External Verifiability                                    │
-│  ─────────────────────────────────                                  │
-│  Purpose: Third-party verification without trusting the producer    │
-│                                                                     │
-│  Components:                                                        │
-│  ├─ Digital Signature (Ed25519): REQUIRED                          │
-│  ├─ Timestamp (dual format ISO+int64): REQUIRED                    │
-│  └─ External Anchor (OpenTimestamps): REQUIRED                     │
-│                                                                     │
-│  Frequency: Daily (Silver Tier)                                    │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  LAYER 2: Collection Integrity    ← Core for external verifiability │
-│  ────────────────────────────────                                   │
-│  Purpose: Prove completeness of event batches                       │
-│                                                                     │
-│  Components:                                                        │
-│  ├─ Merkle Tree (RFC 6962): REQUIRED                               │
-│  ├─ Merkle Root: REQUIRED                                          │
-│  └─ Audit Path (for verification): REQUIRED                        │
-│                                                                     │
-│  Note: Enables third-party verification of batch completeness      │
-│                                                                     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  LAYER 1: Event Integrity                                           │
-│  ────────────────────────                                           │
-│  Purpose: Individual event completeness                             │
-│                                                                     │
-│  Components:                                                        │
-│  ├─ EventHash (SHA-256 of canonical event): REQUIRED               │
-│  └─ PrevHash (link to previous event): OPTIONAL                    │
-│                                                                     │
-│  Note: PrevHash provides real-time detection (OPTIONAL in v1.1)    │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+The archived pack contains 40 records declaring `Security.Version = 1.1`, a
+security object with a root-only signature, a public reference key and an anchor
+reference. The last two are producer-supplied material, not automatically trusted
+identity or proof of external anchoring. No original `.ots` proof is present.
 
----
+The default runtime accepts a caller-selected key. The separate replay command
+requires explicit opt-in to compare against the public reference key and labels
+that comparison as mathematical only. Neither process establishes the key owner's
+identity, trading-system behavior, or correctness of recorded decisions.
 
-## Layer 1: Event Integrity
+## Event integrity
 
-Each event follows the VCP v1.1 schema with Header, Security, and PolicyIdentification:
+The historical `EventHash` is SHA-256 of the UTF-8 concatenation of Python's
+sorted-key JSON for Header and Payload, using the historical default separators.
+This is **not RFC 8785 JCS** and does not cover the PolicyIdentification object.
+The default verifier preserves this encoding instead of rewriting old records.
+It verifies Ed25519 signatures over raw digest bytes for this corpus. The other
+legacy ASCII-hex convention must be selected explicitly for other inputs.
 
-```json
-{
-  "Header": {
-    "EventID": "uuid",
-    "EventType": "SIG",
-    "TimestampISO": "2025-11-20T20:38:25.482205+09:00",
-    "TimestampInt": 1763638705482204928,
-    "Sequence": 1,
-    "AgentID": "VCP-RTA-Reference"
-  },
-  "Payload": {
-    "SignalRef": "39f1bdc5a35ac4b5",
-    "Direction": "BUY",
-    "Confidence": 0.72,
-    "ConsensusSummary": {
-      "ModelCount": 5,
-      "BuyVotes": 3,
-      "SellVotes": 1,
-      "AbstainVotes": 1,
-      "AvgConfidence": 0.68
-    },
-    "Symbol": "USDJPY"
-  },
-  "Security": {
-    "Version": "1.1",
-    "EventHash": "89e14a2f3651ecabe7e201ca4a20ab0a...",
-    "HashAlgo": "SHA256",
-    "SignAlgo": "ED25519",
-    "Signature": "1dd5ed5434e33fc13559a669815009ab...",
-    "PrevHash": "7d3c6b5a4e8f2a1d...",
-    "MerkleRoot": "86c05dbad79ffe6fdb5c3063128df0af...",
-    "MerkleIndex": 0,
-    "AnchorReference": "uuid"
-  },
-  "PolicyIdentification": {
-    "PolicyID": "org.veritaschain.rta:silver-reference-v1",
-    "ConformanceTier": "SILVER",
-    "RegistrationPolicy": {
-      "Issuer": "VeritasChain Standards Organization",
-      "PolicyURI": "https://veritaschain.org/policies/silver-reference",
-      "EffectiveDate": 1767052800000000000
-    },
-    "VerificationDepth": {
-      "HashChainValidation": true,
-      "MerkleProofRequired": true,
-      "ExternalAnchorRequired": true
-    }
-  }
-}
-```
+Sequence checks describe the supplied file's continuity. PrevHash comparisons
+check available links but do not invent the missing first-link boundary. Missing
+material is `INDETERMINATE`, not a claim of nonconformance where chaining may be
+optional in a protocol.
 
-**Security features:**
-- SHA-256 event hashing (canonical JSON serialization)
-- Ed25519 digital signatures
-- Required PolicyIdentification (v1.1)
-- Dual timestamp format (ISO + int64 nanoseconds)
+## Collection integrity
 
----
+Leaves use SHA-256(0x00 || raw EventHash); internal nodes use SHA-256(0x01 || left || right).
+The historical builder duplicates an odd final node at each level. Those prefixes
+do not make its shape the strict RFC 6962 Merkle Tree Hash construction. The
+[fixed-pack replay](../tools/verifier/HISTORICAL.md) records different roots for
+the historical 40-event construction and the strict split construction.
 
-## Layer 2: Collection Integrity
+Current inclusion checks use full-batch order, path length, sibling side,
+MerkleIndex and the historical odd-node rule. A supplied empty path is not missing
+and is accepted only for a consistent single-leaf tree. Matching a supplied root
+does not establish that all real-world events were captured.
 
-### RFC 6962 Merkle Tree
+The security-object signature authenticates the root, **not** event count,
+sequence range or policy. `batch_bounds_local` is a local consistency comparison,
+not authenticated completeness or VAP INT-008 conformance.
 
-Constructs a Merkle Tree from all event hashes with domain separation:
+## External evidence and the optional extension
 
-```
-                    Merkle Root
-                        │
-            ┌───────────┴───────────┐
-            │                       │
-    H(0x01 || H0 || H1)     H(0x01 || H2 || H3)
-            │                       │
-      ┌─────┴─────┐           ┌─────┴─────┐
-      │           │           │           │
-  H(0x00||E0)  H(0x00||E1)  H(0x00||E2)  H(0x00||E3)
-```
+The default CLI does not verify external timestamps. Its Python API permits a
+trusted caller-provided adapter; adapter code is never selected by evidence.
+Missing or unusable checks do not pass. A producer's `CONFIRMED` label is ignored
+as an assertion, not treated as a timestamp verification result.
 
-**RFC 6962 Domain Separation:**
-- Leaf nodes: `0x00` prefix
-- Internal nodes: `0x01` prefix
+The separate [supplemental verifier](../tools/verifier/SUPPLEMENTAL.md) authenticates
+a new signed statement binding context, root, count, endpoint IDs, sequence range,
+policy and parsed snapshots of the entire events/security object. Its RFC 3161
+check covers the whole signed envelope and uses an explicit caller CA bundle and
+policy. It does not recover or replace the original historical anchor.
 
-**Benefits:**
-- Prevents second preimage attacks
-- Efficient verification of any event integrity
-- Partial verification possible (audit path only)
+Later attestation cannot establish original log time. The stated checks exclude
+revocation, live freshness, historical certificate validity, qualified-TSA status
+and legal evidentiary effect. They do not constitute a normative format adoption.
 
-### PrevHash Linking
+## Aggregation and test evidence
 
-Each event may reference the previous event's hash:
+Each independent available check runs. Aggregation gives `INVALID` priority over
+`INDETERMINATE`, then `VALID`; missing material cannot hide a demonstrated mismatch.
+No general VCP schema/conformance assessment is implemented. The archived corpus
+therefore retains an overall `INDETERMINATE` verdict even when its individual
+hashes and signatures match the reference material.
 
-```
-Event 1 ──PrevHash──> Event 2 ──PrevHash──> Event 3
-```
-
-**v1.1 change:** PrevHash is now OPTIONAL. Merkle Tree provides equivalent completeness guarantees.
-
----
-
-## Layer 3: External Verifiability
-
-### External Timestamp Anchoring
-
-Anchors Merkle Root to external services for third-party verification:
-
-```
-[Merkle Root] ──submit──> [OpenTimestamps] ──anchor──> [Bitcoin]
-```
-
-**Silver Tier requirements:**
-- External anchor is REQUIRED (was optional in v1.0)
-- Daily anchoring frequency
-- Third parties can independently verify timestamps
-
----
-
-## Attack Scenarios and Defense
-
-| Attack | Detection Method | Layer |
-|--------|------------------|-------|
-| **Event modification** | EventHash + Merkle Root mismatch | L1 + L2 |
-| **Event deletion** | Sequence Gap + Merkle Root mismatch | L1 + L2 |
-| **Event insertion** | PrevHash mismatch + Merkle Root mismatch | L1 + L2 |
-| **Reordering** | PrevHash mismatch + Sequence Gap | L1 |
-| **Timestamp manipulation** | External anchor mismatch | L3 |
-| **Post-hoc log fabrication** | External anchor proves existence time | L3 |
-
----
-
-## v1.0 → v1.1 Changes
-
-| Item | v1.0 | v1.1 |
-|------|------|------|
-| Merkle Tree | Optional | **Required** |
-| External Anchor | Optional | **Silver: Required** |
-| Policy Identification | None | **Required** |
-| PrevHash | Required | Optional |
-| Completeness Guarantees | None | **Available** |
-| Dual Timestamp Format | None | **Required** |
-| RFC 6962 Compliance | None | **Required** |
-
----
-
-## References
-
-- [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec/tree/main/spec/v1.1)
-- [OpenTimestamps](https://opentimestamps.org/)
-- [RFC 6962 - Certificate Transparency](https://datatracker.ietf.org/doc/html/rfc6962)
-- [RFC 8785 - JSON Canonicalization Scheme (JCS)](https://datatracker.ietf.org/doc/html/rfc8785)
+[Current regression instructions](../tools/verifier/REPRODUCING.md) cover synthetic
+cryptographic tests. [Historical replay](../tools/verifier/HISTORICAL.md) separately
+covers the fixed published data. Both are first-party tests. Neither their green
+CI status nor a per-check `VALID` result establishes independent reproduction,
+production suitability, certification or full evidence verification.

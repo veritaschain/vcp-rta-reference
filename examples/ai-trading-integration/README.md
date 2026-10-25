@@ -201,4 +201,4 @@ CC BY 4.0
 ## See Also
 
 - [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec)
-- [Verification Guide](../docs/VERIFICATION_GUIDE.md)
+- [Verification Guide](../../docs/VERIFICATION_GUIDE.md)

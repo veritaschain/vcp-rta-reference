@@ -1,219 +1,122 @@
-> **Verifier runtime update, 26 October 2026.** The default CLI now evaluates
-> Ed25519 signatures with an explicitly trusted key and reports VALID, INVALID or
-> INDETERMINATE per check. Missing inputs no longer become passes or hide other
-> mismatches. This is a first-party legacy-format tool, not a conformance claim.
-> The CLI does not verify external anchors, and authenticated batch metadata is
-> not implemented, so it does not return an overall VALID result. Historical
-> evidence and reports are unchanged; their old all-pass output is not current.
-> See [current behavior, limitations and migration](tools/verifier/README.md).
->
-> **検証器更新（2026-10-26）:** 提案書だけでなく実行コードを更新しました。
-> 検証材料不足は未検証とし、検出できた不一致を隠しません。外部アンカーの実証明検証・
-> バッチメタデータの認証は未実装です。旧レポートは保存し、現在の適合証明とは扱いません。
+# VeritasChain Protocol (VCP) Reference Trading Agent
 
-## 🔗 Related Reference Implementations (Other Platforms)
+[English](README.md) | [日本語](README.ja.md)
 
-### cTrader
+![Legacy format](https://img.shields.io/badge/Evidence-legacy_v1.1-blue)
+![Non-certified PoC](https://img.shields.io/badge/Status-Non--certified_PoC-orange)
+![License](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey)
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-ctrader-rta-reference
+First-party proof-of-concept code and archived trading records maintained by
+**VeritasChain Standards Organization (VSO)**, operated by VeritasChain Co., Ltd.
+The original design targeted VCP v1.1 Silver. **No VCP tier or VAP conformance,
+certification, production readiness, or independent reproduction is established
+by this repository.** The archived format declares v1.1 but has implementation
+choices that differ from the specification's referenced algorithms.
 
-### FIX Protocol
+## Current status: 26 October 2026
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-fix-rta-reference
+The default verifier actually checks Ed25519 signatures when the caller supplies
+an explicitly trusted key. It reports `VALID`, `INVALID` or `INDETERMINATE` for
+each check. Missing material does not pass or hide an independently detected
+mismatch. Its default CLI has no external-anchor provider or authenticated-batch
+metadata implementation. See [runtime behavior](tools/verifier/README.md).
 
-### Interactive Brokers (IBKR)
+A **separate opt-in verifier** checks a signed supplemental batch statement and
+an RFC 3161 timestamp using caller-selected keys, CA certificates and policy.
+This is an implementation extension, not an adopted VCP/VAP format. A later
+supplemental stamp does not establish the historical log's creation or original
+anchoring time. See [supplemental verification](tools/verifier/SUPPLEMENTAL.md).
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-ibkr-rta-reference
+The original OpenTimestamps proof named `merkle_root.ots` is not present in the
+archived evidence. The producer's anchor-reference claim is not confirmation.
+Existing reports, signatures and files under `evidence/` are preserved. Their
+old all-pass or compliance wording is historical, not a current result.
 
-### Nasdaq
+## Published-pack replay
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-nasdaq-rta-reference
+The [read-only replay](tools/verifier/HISTORICAL.md) checks the fixed **40-event**
+corpus, not just synthetic fixtures. Initial CI replay on 26 October 2026 found:
 
-### cloudflare
+| Check | Result and boundary |
+| --- | --- |
+| All 40 event hashes | Match the historical JSON-concatenation encoding, not JCS |
+| All 40 event signatures | Match the explicitly selected published reference key; this does not establish its owner's identity |
+| Root signature and all inclusion paths | Match the published root using the historical duplicate-odd tree, not strict RFC 6962 MTH |
+| Sequence and local batch bounds | Match supplied records; root-only signing does not authenticate the bounds |
+| First-link/PrevHash boundary, authenticated metadata, original external anchor | Remain `INDETERMINATE` |
+| Overall evidence verdict | **INDETERMINATE**, not full verification or certification |
 
-> 📌 **World-First Evidence**  
-> Publicly documented, independently verifiable cryptographic audit trail PoC  
-> 👉 https://github.com/veritaschain/vcp-cloudflare-rta-reference
+The records contain **20 SIG and 20 EXE events**. EXE records executions, not
+order submissions; the previous "Order Events" label has been corrected.
+A passing regression means the expected results were reproduced, not that the
+evidence received an overall `VALID` verdict.
 
-# VCP Reference Trading Agent (VCP-RTA)
+## Run
 
-[**English**](README.md) | [日本語](README.ja.md)
-
-![VCP v1.1](https://img.shields.io/badge/VCP-v1.1-blue)
-![Tier Silver](https://img.shields.io/badge/Tier-Silver-silver)
-![License CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)
-
-> **"Verify, Don't Trust."**
-
-VCP-RTA is a reference implementation demonstrating **VCP v1.1 Silver Tier** compliance for algorithmic trading systems. This repository provides a complete, verifiable evidence pack that third parties can independently validate.
-
-📄 **A detailed "World's First" Evidence Report documenting independent prior-art analyses is included in this repository.**
-
----
-
-## Overview
-
-This Evidence Pack demonstrates a production-grade implementation of VCP in a live MT5 environment. The implementation captures AI-driven trading decisions and execution events using a non-invasive sidecar architecture that operates independently of the core trading platform.
-
-AI decision signals, order lifecycle events, and execution outcomes are recorded externally, cryptographically hashed, organized into Merkle trees, and anchored to enable independent third-party verification.
-
----
-
-## What's New in v1.1
-
-| Feature | v1.0 | v1.1 |
-|---------|------|------|
-| **Three-Layer Architecture** | - | ✅ NEW |
-| **External Anchor (Silver)** | OPTIONAL | **REQUIRED** |
-| **Policy Identification** | - | **REQUIRED** |
-| **PrevHash** | REQUIRED | OPTIONAL |
-| **Completeness Guarantees** | - | ✅ NEW |
-
-> **v1.1 Core Enhancement:** Extends tamper-evidence to **completeness guarantees** — third parties can now verify not only that events were not altered, but that **no required events were omitted**.
-
----
-
-## Repository Structure
-```
-vcp_v1_1_repo_aligned/
-├── evidence/
-│   ├── evidence_index.json          # Evidence manifest
-│   ├── 01_trade_logs/
-│   │   └── vcp_rta_events.jsonl     # VCP v1.1 event chain (40 events)
-│   ├── 02_verification/
-│   │   └── verification_report.txt  # Verification results
-│   ├── 03_tamper_detection/
-│   │   ├── tamper_detection_test.py # Tamper detection test
-│   │   └── tampered_chain.jsonl     # Tampered sample for testing
-│   └── 04_anchor/
-│       ├── security_object.json     # Merkle tree & signatures
-│       ├── anchor_reference.json    # External anchor info
-│       └── public_key.json          # Verification public key
-├── examples/
-│   └── ai-trading-integration/
-│       ├── README.md                # Integration guide
-│       ├── vcp_logger.py            # VCP v1.1 logger module
-│       └── vcp_poc_demo.py          # PoC demonstration
-├── tools/
-│   └── verifier/
-│       └── vcp_verifier.py          # Chain verification tool
-├── docs/
-│   ├── VERIFICATION_GUIDE.md        # Step-by-step verification
-│   └── architecture.md              # Three-layer architecture
-├── CHANGELOG.md
-├── DISCLAIMER.md
-└── LICENSE
-```
----
-
-## Quick Verification
-
-### Prerequisites
-- Python 3.8+
-- Standard-library checks can run alone; install `cryptography` for Ed25519 verification.
-- No key is trusted automatically. See [verifier instructions](tools/verifier/README.md).
-
-### Run Verification
-
-```bash
-# Clone the repository
-git clone https://github.com/veritaschain/vcp-rta-reference.git
-cd vcp-rta-reference
-
-# Run verification (Linux/macOS)
-python tools/verifier/vcp_verifier.py \
-    evidence/01_trade_logs/vcp_rta_events.jsonl \
-    -s evidence/04_anchor/security_object.json
-
-# Run verification (Windows)
-python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.jsonl -s evidence\04_anchor\security_object.json
-
-# Run tamper detection test
-python evidence/03_tamper_detection/tamper_detection_test.py
-```
-
-### Reading the Result
-
-The previous all-pass example was removed on 26 October 2026. The commands above
-supply neither an explicitly trusted key nor an external-anchor verifier. Those
-checks are INDETERMINATE, not successful verification. A demonstrated mismatch
-in any executed check takes precedence and produces INVALID.
-
-Exit codes are 1 for INVALID, 2 for INDETERMINATE, and 3 for unreadable event input
-or output failure. Add `--json` for report format version 2. `--public-key PATH`
-enables real Ed25519 verification under the caller's key-trust decision; it does
-not establish key ownership. No VCP/VAP conformance or certification is asserted.
-
-The historical reports and test scripts under `evidence/` are preserved, not
-rewritten as new verification results. Current regression tests are separate:
+The current regression workflows exercise Python 3.11 and 3.13.5 on Ubuntu 24.04.
+Use the [pinned direct test dependencies and reproduction guide](tools/verifier/REPRODUCING.md).
+They are not a complete operating-system or transitive dependency lockfile.
 
 ```sh
-python -m pip install pytest cryptography
-python -m pytest -q tests/test_verifier.py
+git clone https://github.com/veritaschain/vcp-rta-reference.git
+cd vcp-rta-reference
+python -m pip install -r requirements-verifier-test.txt
+
+# No key is automatically trusted; missing checks stay INDETERMINATE.
+python tools/verifier/vcp_verifier.py evidence/01_trade_logs/vcp_rta_events.jsonl \
+  -s evidence/04_anchor/security_object.json --json
+
+# Explicit mathematical comparison only, not a key-identity assertion.
+python tools/verifier/inspect_historical_pack.py --compare-reference-key
 ```
 
----
+The replay intentionally exits **2** for the current incomplete evidence verdict.
+Use `--public-key /path/to/trusted-key` with the default verifier only after
+establishing trust separately. Do not infer trust from an embedded public key.
 
-## Evidence Summary
+```sh
+# Existing synthetic regression suite: 250 cases.
+python tools/verifier/run_regression.py
+# Fixed-pack regression suite: 15 cases, including in-memory tampering tests.
+python -m pytest -q tests/test_historical_evidence.py
+```
 
-| Metric | Value |
-|--------|-------|
-| **Total Events** | 40 |
-| **Signal Events** | 20 |
-| **Order Events** | 20 |
-| **VCP Version** | 1.1 |
-| **Tier** | Silver |
+Both suites run in CI. The historical replay workflow separately retains its
+JSON report, JUnit results, source/evidence hashes and artifact manifest. These
+are first-party results, not independent third-party validation.
 
-### Anonymization
+## Repository map
 
-This evidence pack anonymizes sensitive information:
-- Ticket numbers: SHA-256 hashed
-- Position IDs: SHA-256 hashed
-- Trade amounts: Excluded
-- Account identifiers: Excluded
-- AI model names: Excluded (vote counts only)
+| Location | Purpose |
+| --- | --- |
+| `evidence/` | Unmodified historical logs, keys, root, claims and reports |
+| `tools/verifier/vcp_verifier.py` | Legacy-format three-valued verifier |
+| `tools/verifier/verify_attested_batch.py` | Opt-in supplemental signature and RFC 3161 checks |
+| `tools/verifier/inspect_historical_pack.py` | Read-only fixed-corpus replay, with explicit reference-key opt-in |
+| `tests/` | Current synthetic and fixed-pack regression tests |
+| `examples/ai-trading-integration/` | Historical logger/demo examples, not upgraded by the verifier changes |
+| `docs/VERIFICATION_GUIDE.md` | Current verification entry points and interpretation |
+| `docs/architecture.md` | Implementation architecture and limits |
 
----
+## Related implementations and historical materials
 
-## Security Features
+Related first-party repositories: [cTrader](https://github.com/veritaschain/vcp-ctrader-rta-reference),
+[FIX](https://github.com/veritaschain/vcp-fix-rta-reference),
+[IBKR](https://github.com/veritaschain/vcp-ibkr-rta-reference),
+[Nasdaq](https://github.com/veritaschain/vcp-nasdaq-rta-reference), and
+[Cloudflare](https://github.com/veritaschain/vcp-cloudflare-rta-reference).
+This replay does not validate those repositories or promote their status.
 
-### Three-Layer Architecture (VCP v1.1)
+The [historical "World's First" report](VCP_Worlds_First_Evidence_Report.pdf)
+is preserved as an earlier research record, not adopted here as a verified
+priority claim. Earlier README wording is available in Git history.
+For the separate newer offline SDK, see [vcp-sdk](https://github.com/veritaschain/vcp-sdk).
+Specification status is maintained in [vcp-spec](https://github.com/veritaschain/vcp-spec),
+not determined by the version label in this archived pack.
 
-1. **Layer 1: Event Integrity** - Individual event hash & signature (SHA-256 + Ed25519)
-2. **Layer 2: Collection Integrity** - RFC 6962 Merkle Tree + PrevHash linking
-3. **Layer 3: External Verifiability** - External timestamp anchoring (OpenTimestamps)
+## License and contact
 
-### Tamper Detection Capabilities
+[CC BY 4.0](LICENSE). See [DISCLAIMER.md](DISCLAIMER.md).
+Technical contact: standards@veritaschain.org.
 
-- ✅ **Event Omission** (Deletion Attack) - Detected via sequence gaps + Merkle mismatch
-- ✅ **Event Modification** (Alteration Attack) - Detected via Merkle root mismatch
-- ✅ **Event Insertion** (Injection Attack) - Detected via prev_hash + Merkle mismatch
-
----
-
-## License
-
-This evidence pack is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
----
-
-## Integration Examples
-
-The `examples/` directory contains reference implementations for integrating VCP into your own systems:
-
-- **[AI Trading Integration](examples/ai-trading-integration/)** - Python module for logging trading events with VCP v1.1 compliance
-
----
-
-## Related Links
-
-- [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec/tree/main/spec/v1.1)
-- [VeritasChain Standards Organization](https://github.com/veritaschain)
+**VeritasChain Standards Organization (VSO): Verify, Don't Trust.**

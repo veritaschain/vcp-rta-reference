@@ -2,7 +2,7 @@
 
 ## English
 
-This evidence pack is provided as a **reference implementation** of VCP (Verifiable Chain Protocol) v1.1.
+This evidence pack is provided as a **reference implementation** of VCP (VeritasChain Protocol) v1.1.
 
 ### Important Notes
 
@@ -30,7 +30,7 @@ This evidence pack is provided as a **reference implementation** of VCP (Verifia
 
 ## 日本語
 
-このエビデンスパックは、VCP (Verifiable Chain Protocol) v1.1の**リファレンス実装**として提供されています。
+このエビデンスパックは、VCP (VeritasChain Protocol) v1.1の**リファレンス実装**として提供されています。
 
 ### 重要な注意事項
 
