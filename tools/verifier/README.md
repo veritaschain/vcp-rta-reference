@@ -32,7 +32,14 @@ object is never automatically trusted. `--signature-message raw_digest` (default
 verifies raw-digest signatures; `ascii_hex` must be explicitly selected for the
 other historical encoding. The verifier does not try encodings until one passes.
 
-`--output report.json --json` saves the same JSON report that is printed.
+`--output report.json --json` saves the same JSON report that is printed,
+**only to a new file**. Both default and supplemental CLIs refuse existing
+outputs and paths aliasing any supplied input, including missing optional inputs.
+A refused save exits 3; use a fresh output name for every run. The report is
+staged before exclusive publication; filesystems without hard-link support
+fail closed. See [output safety and migration](REPORT_OUTPUT.md), including
+trusted-directory requirements and the separate risk of shell redirection.
+
 Without `--json`, output is text. Existing event-file, `-s` and `-o` CLI options
 remain available, but **report format and Python return shape change to version 2**.
 The old boolean result fields and falsely named `compute_rfc6962_merkle_root`
