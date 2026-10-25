@@ -1,342 +1,496 @@
 #!/usr/bin/env python3
-"""
-VCP v1.1 Verifier - Fully Compliant Version
-Third-party verifiable chain integrity checker.
+"""Offline verifier for this repository's legacy VCP v1.1 evidence format.
 
-Verifies compliance with VCP Specification v1.1:
-- Three-Layer Architecture verification
-- RFC 6962 Merkle Tree validation
-- Security Object Schema validation
-- Policy Identification validation
+Not a VCP/VAP conformance verifier. The historical JSON/hash and duplicate-odd
+Merkle construction are preserved, not relabelled RFC 8785/RFC 6962 compliant.
+An unavailable check never passes. Evidence files do not supply trusted keys.
 """
+from __future__ import annotations
 
-import json
+import argparse
+import base64
+import binascii
 import hashlib
+import json
+import re
 import sys
-from datetime import datetime
-from typing import Dict, List, Tuple
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+except ImportError:  # Non-cryptographic checks can still run.
+    InvalidSignature = None
+    Ed25519PublicKey = None
+
+VALID = "VALID"
+INVALID = "INVALID"
+INDETERMINATE = "INDETERMINATE"
+EXIT_CODES = {VALID: 0, INVALID: 1, INDETERMINATE: 2}
+HEX64 = re.compile(r"[0-9a-fA-F]{64}\Z")
+MISSING = object()
+ExternalVerifier = Callable[[str, Dict[str, Any]], Dict[str, str]]
+
+
+def check(status: str, reason: str) -> Dict[str, str]:
+    if status not in EXIT_CODES or not isinstance(reason, str) or not reason:
+        raise ValueError("A check needs a known status and a nonempty reason")
+    return {"status": status, "reason": reason}
+
+
+def combine(checks: List[Dict[str, str]]) -> Dict[str, str]:
+    """Empty or malformed result sets are not successful verification."""
+    if not checks:
+        return check(INDETERMINATE, "NO_CHECKS")
+    malformed = any(not isinstance(c, dict) or c.get("status") not in EXIT_CODES
+                    or not isinstance(c.get("reason"), str) or not c["reason"] for c in checks)
+    statuses = [c.get("status") for c in checks if isinstance(c, dict)]
+    if INVALID in statuses:
+        return check(INVALID, "DEMONSTRATED_MISMATCH")
+    if malformed or INDETERMINATE in statuses:
+        return check(INDETERMINATE, "INCOMPLETE_VERIFICATION")
+    return check(VALID, "ALL_PERFORMED_CHECKS_MATCHED")
+
+
+def _object(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _hex(value: Any) -> bool:
+    return isinstance(value, str) and HEX64.fullmatch(value) is not None
+
+
+def _integer(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
 
 def sha256_hex(data: str) -> str:
-    """SHA-256 hash in hex format."""
-    return hashlib.sha256(data.encode('utf-8')).hexdigest()
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+
+def event_content_hash(event: Dict[str, Any]) -> str:
+    """Historical pack encoding, NOT RFC 8785/JCS. Do not re-sign old data."""
+    return sha256_hex(json.dumps(event["Header"], sort_keys=True, allow_nan=False)
+                      + json.dumps(event["Payload"], sort_keys=True, allow_nan=False))
+
 
 def rfc6962_leaf_hash(data: bytes) -> bytes:
-    """RFC 6962 compliant leaf hash with 0x00 prefix."""
-    return hashlib.sha256(b'\x00' + data).digest()
+    return hashlib.sha256(b"\x00" + data).digest()
+
 
 def rfc6962_node_hash(left: bytes, right: bytes) -> bytes:
-    """RFC 6962 compliant internal node hash with 0x01 prefix."""
-    return hashlib.sha256(b'\x01' + left + right).digest()
+    return hashlib.sha256(b"\x01" + left + right).digest()
 
-def compute_rfc6962_merkle_root(event_hashes: List[str]) -> str:
-    """Compute RFC 6962 compliant Merkle root."""
-    if not event_hashes:
-        return sha256_hex("")
-    
-    # Create leaf hashes with 0x00 prefix
-    current_level = [rfc6962_leaf_hash(bytes.fromhex(h)) for h in event_hashes]
-    
-    while len(current_level) > 1:
-        next_level = []
-        for i in range(0, len(current_level), 2):
-            if i + 1 < len(current_level):
-                node = rfc6962_node_hash(current_level[i], current_level[i + 1])
-            else:
-                node = rfc6962_node_hash(current_level[i], current_level[i])
-            next_level.append(node)
-        current_level = next_level
-    
-    return current_level[0].hex() if current_level else sha256_hex("")
 
-def verify_event_hash(event: Dict) -> Tuple[bool, str]:
-    """Verify individual event hash (Layer 1)."""
-    security = event.get('Security', {})
-    stored_hash = security.get('EventHash')
-    
-    if not stored_hash:
-        return False, "Missing EventHash"
-    
-    # Compute hash over Header + Payload
-    # Canonical JSON serialization (sorted keys) per RFC 8785 principles
-    header = event.get('Header', {})
-    payload = event.get('Payload', {})
-    hash_input = json.dumps(header, sort_keys=True) + json.dumps(payload, sort_keys=True)
-    computed_hash = sha256_hex(hash_input)
-    
-    if computed_hash == stored_hash:
-        return True, "OK"
-    else:
-        return False, f"Hash mismatch: expected {computed_hash[:16]}..., got {stored_hash[:16]}..."
+def compute_legacy_merkle_root(hashes: List[str]) -> str:
+    """Duplicate-odd tree used by the published pack, NOT RFC 6962 MTH."""
+    if any(not _hex(h) for h in hashes):
+        raise ValueError("Event hashes must be 32-byte hexadecimal digests")
+    if not hashes:
+        return hashlib.sha256(b"").hexdigest()
+    level = [rfc6962_leaf_hash(bytes.fromhex(h)) for h in hashes]
+    while len(level) > 1:
+        level = [rfc6962_node_hash(level[i], level[min(i + 1, len(level) - 1)])
+                 for i in range(0, len(level), 2)]
+    return level[0].hex()
 
-def verify_security_object(event: Dict) -> List[str]:
-    """Verify Security object has all required fields (v1.1)."""
-    errors = []
-    security = event.get('Security', {})
-    
-    required_fields = [
-        ('Version', str),
-        ('EventHash', str),
-        ('HashAlgo', str),
-        ('Signature', str),
-        ('SignAlgo', str),
-        ('MerkleRoot', str),
-        ('MerkleIndex', int),
-        ('AnchorReference', str)
-    ]
-    
-    for field, field_type in required_fields:
-        if field not in security:
-            errors.append(f"Missing Security.{field}")
-        elif not isinstance(security[field], field_type):
-            errors.append(f"Security.{field} has wrong type")
-    
-    return errors
 
-def verify_policy_identification(event: Dict) -> List[str]:
-    """Verify Policy Identification has all required fields (v1.1)."""
-    errors = []
-    policy = event.get('PolicyIdentification', {})
-    
-    if not policy:
-        errors.append("Missing PolicyIdentification")
-        return errors
-    
-    if 'PolicyID' not in policy:
-        errors.append("Missing PolicyIdentification.PolicyID")
-    
-    if 'ConformanceTier' not in policy:
-        errors.append("Missing PolicyIdentification.ConformanceTier")
-    elif policy['ConformanceTier'] not in ['SILVER', 'GOLD', 'PLATINUM']:
-        errors.append(f"Invalid ConformanceTier: {policy['ConformanceTier']}")
-    
-    reg_policy = policy.get('RegistrationPolicy', {})
-    if 'Issuer' not in reg_policy:
-        errors.append("Missing PolicyIdentification.RegistrationPolicy.Issuer")
-    
-    verification_depth = policy.get('VerificationDepth', {})
-    if not verification_depth:
-        errors.append("Missing PolicyIdentification.VerificationDepth")
-    else:
-        for field in ['HashChainValidation', 'MerkleProofRequired', 'ExternalAnchorRequired']:
-            if field not in verification_depth:
-                errors.append(f"Missing PolicyIdentification.VerificationDepth.{field}")
-    
-    return errors
+def _expected_root(record: Dict[str, Any]) -> Any:
+    direct = record.get("MerkleRoot", MISSING)
+    nested = _object(record.get("MerkleTree")).get("Root", MISSING)
+    if direct is not MISSING:
+        return direct
+    return nested
 
-def verify_chain(events: List[Dict]) -> Dict:
-    """Verify complete event chain integrity (all layers)."""
-    results = {
-        "status": "VALID",
-        "events_total": len(events),
-        "events_valid": 0,
-        "events_invalid": 0,
-        "security_valid": True,
-        "policy_valid": True,
-        "sequence_valid": True,
-        "prevhash_valid": True,
-        "errors": []
-    }
-    
-    prev_hash = None
-    expected_seq = 1
-    
-    for i, event in enumerate(events):
-        # Layer 1: Event hash verification
-        valid, msg = verify_event_hash(event)
-        if valid:
-            results["events_valid"] += 1
+
+def check_structure(events: List[Any]) -> Dict[str, str]:
+    if not events:
+        return check(INDETERMINATE, "NO_EVENTS")
+    for event in events:
+        if not isinstance(event, dict) or any(not isinstance(event.get(k), dict)
+                                             for k in ("Header", "Payload", "Security")):
+            return check(INVALID, "MALFORMED_EVENT_OBJECT")
+    return check(VALID, "EVENT_CONTAINERS_ONLY; not full schema validation")
+
+
+def check_hashes(events: List[Any]) -> Dict[str, str]:
+    results = []
+    for event in events:
+        event = _object(event)
+        security = _object(event.get("Security"))
+        if security.get("HashAlgo") != "SHA256":
+            results.append(check(INDETERMINATE, "HASH_ALGORITHM_UNSUPPORTED_OR_MISSING"))
+        elif not _hex(security.get("EventHash")):
+            results.append(check(INVALID, "MALFORMED_EVENT_HASH"))
+        elif not all(isinstance(event.get(k), dict) for k in ("Header", "Payload")):
+            results.append(check(INDETERMINATE, "HASH_INPUT_UNAVAILABLE"))
         else:
-            results["events_invalid"] += 1
-            results["errors"].append(f"Event {i+1}: {msg}")
-            results["status"] = "INVALID"
-        
-        # Security Object verification
-        security_errors = verify_security_object(event)
-        if security_errors:
-            results["security_valid"] = False
-            for err in security_errors:
-                results["errors"].append(f"Event {i+1}: {err}")
-            results["status"] = "INVALID"
-        
-        # Policy Identification verification
-        policy_errors = verify_policy_identification(event)
-        if policy_errors:
-            results["policy_valid"] = False
-            for err in policy_errors:
-                results["errors"].append(f"Event {i+1}: {err}")
-            results["status"] = "INVALID"
-        
-        # Sequence verification
-        header = event.get('Header', {})
-        seq = header.get('Sequence')
-        if seq != expected_seq:
-            results["sequence_valid"] = False
-            results["errors"].append(f"Event {i+1}: sequence {seq}, expected {expected_seq}")
-            results["status"] = "INVALID"
-        expected_seq = seq + 1 if seq else expected_seq + 1
-        
-        # PrevHash verification (optional but check if present)
-        security = event.get('Security', {})
-        if 'PrevHash' in security:
-            if prev_hash and security['PrevHash'] != prev_hash:
-                results["prevhash_valid"] = False
-                results["errors"].append(f"Event {i+1}: PrevHash mismatch")
-                results["status"] = "INVALID"
-        
-        prev_hash = security.get('EventHash')
-    
-    return results
+            try:
+                matched = event_content_hash(event) == security["EventHash"].lower()
+                results.append(check(VALID if matched else INVALID,
+                                     "LEGACY_HASH_MATCH" if matched else "EVENT_HASH_MISMATCH"))
+            except (TypeError, ValueError, UnicodeError, RecursionError):
+                results.append(check(INVALID, "UNENCODABLE_HASH_INPUT"))
+    return combine(results)
 
-def verify_merkle_root(events: List[Dict], expected_root: str) -> Tuple[bool, str]:
-    """Verify Merkle root matches events (Layer 2)."""
-    event_hashes = [e.get('Security', {}).get('EventHash', '') for e in events]
-    computed = compute_rfc6962_merkle_root(event_hashes)
-    
-    if computed == expected_root:
-        return True, computed
-    else:
-        return False, f"Mismatch: computed {computed[:16]}..., expected {expected_root[:16]}..."
 
-def load_events(filepath: str) -> List[Dict]:
-    """Load events from JSONL file."""
+def check_sequence(events: List[Any]) -> Dict[str, str]:
+    results = []
+    previous = None
+    for event in events:
+        seq = _object(_object(event).get("Header")).get("Sequence", MISSING)
+        if seq is MISSING:
+            results.append(check(INDETERMINATE, "SEQUENCE_MISSING"))
+        elif not _integer(seq) or seq < 1:
+            results.append(check(INVALID, "MALFORMED_SEQUENCE"))
+        elif previous is not None and seq != previous + 1:
+            results.append(check(INVALID, "SEQUENCE_GAP"))
+        else:
+            results.append(check(VALID, "SUPPLIED_SEQUENCE_CONTIGUITY_ONLY"))
+        previous = seq if _integer(seq) and seq >= 1 else None
+    return combine(results)
+
+
+def check_prevhash(events: List[Any]) -> Dict[str, str]:
+    results = []
+    previous = None
+    for event in events:
+        security = _object(_object(event).get("Security"))
+        link = security.get("PrevHash", MISSING)
+        if link is MISSING:
+            results.append(check(INDETERMINATE, "PREVHASH_NOT_SUPPLIED"))
+        elif not _hex(link):
+            results.append(check(INVALID, "MALFORMED_PREVHASH"))
+        elif previous is None:
+            results.append(check(INDETERMINATE, "PRIOR_HASH_NOT_SUPPLIED"))
+        else:
+            matched = previous == link.lower()
+            results.append(check(VALID if matched else INVALID,
+                                 "PREVHASH_MATCH" if matched else "PREVHASH_MISMATCH"))
+        stored = security.get("EventHash")
+        previous = stored.lower() if _hex(stored) else None
+    return combine(results)
+
+
+def check_policy(events: List[Any]) -> Dict[str, str]:
+    results = []
+    for event in events:
+        policy = _object(_object(event).get("PolicyIdentification"))
+        if not policy:
+            results.append(check(INDETERMINATE, "POLICY_MISSING"))
+            continue
+        depth = _object(policy.get("VerificationDepth"))
+        ok = (isinstance(policy.get("PolicyID"), str) and bool(policy["PolicyID"])
+              and policy.get("ConformanceTier") in ("SILVER", "GOLD", "PLATINUM")
+              and isinstance(_object(policy.get("RegistrationPolicy")).get("Issuer"), str)
+              and all(type(depth.get(k)) is bool for k in
+                      ("HashChainValidation", "MerkleProofRequired", "ExternalAnchorRequired")))
+        results.append(check(VALID if ok else INVALID,
+                             "POLICY_FIELD_SHAPE_ONLY" if ok else "MALFORMED_POLICY"))
+    return combine(results)
+
+
+def verify_digest_signature(signature: Any, digest: Any, algorithm: Any,
+                            public_key: Optional[bytes], encoding: str) -> Dict[str, str]:
+    if algorithm != "ED25519":
+        return check(INDETERMINATE, "SIGNATURE_ALGORITHM_UNSUPPORTED_OR_MISSING")
+    if public_key is None:
+        return check(INDETERMINATE, "TRUSTED_KEY_MISSING")
+    if not isinstance(public_key, bytes) or len(public_key) != 32:
+        return check(INDETERMINATE, "TRUSTED_KEY_UNUSABLE")
+    if signature is None or signature == "":
+        return check(INDETERMINATE, "SIGNATURE_MISSING")
+    if not _hex(digest):
+        return check(INDETERMINATE, "SIGNATURE_MESSAGE_UNAVAILABLE")
+    if not isinstance(signature, str):
+        return check(INVALID, "MALFORMED_SIGNATURE")
+    try:
+        if re.fullmatch(r"[0-9a-fA-F]{128}", signature):
+            raw = bytes.fromhex(signature)
+        else:
+            raw = base64.b64decode(signature, validate=True)
+        if len(raw) != 64:
+            return check(INVALID, "MALFORMED_SIGNATURE_LENGTH")
+    except (ValueError, binascii.Error):
+        return check(INVALID, "MALFORMED_SIGNATURE_ENCODING")
+    if Ed25519PublicKey is None:
+        return check(INDETERMINATE, "ED25519_DEPENDENCY_UNAVAILABLE")
+    if encoding not in ("raw_digest", "ascii_hex"):
+        return check(INDETERMINATE, "SIGNATURE_MESSAGE_ENCODING_UNSUPPORTED")
+    message = bytes.fromhex(digest) if encoding == "raw_digest" else digest.encode("ascii")
+    try:
+        Ed25519PublicKey.from_public_bytes(public_key).verify(raw, message)
+    except InvalidSignature:
+        return check(INVALID, "SIGNATURE_MISMATCH")
+    return check(VALID, "ED25519_MATCH; key trust supplied by caller; " + encoding)
+
+
+def _guard(function: Callable[[], Dict[str, str]]) -> Dict[str, str]:
+    """A failed helper cannot suppress a mismatch in another required check."""
+    try:
+        result = function()
+        if not isinstance(result, dict):
+            raise ValueError("Invalid verifier result")
+        return check(result.get("status"), result.get("reason"))
+    except Exception as exc:
+        return check(INDETERMINATE, "VERIFIER_ERROR:" + type(exc).__name__)
+
+
+def verify_chain(events: List[Any], security_object: Optional[Dict[str, Any]] = None,
+                 public_key: Optional[bytes] = None, *,
+                 signature_message: str = "raw_digest",
+                 external_anchor_verifier: Optional[ExternalVerifier] = None) -> Dict[str, Any]:
+    """Verify without early exit on missing events, proofs, records or keys.
+
+    `external_anchor_verifier` is trusted caller code, never loaded from evidence.
+    It must verify an external commitment to the EXACT supplied root and return a
+    check dict. There is no built-in external-anchor provider or network access.
+    """
+    checks = {}
+    def run(name: str, function: Callable[[], Dict[str, str]]) -> None:
+        checks[name] = _guard(function)
+
+    supplied = events if isinstance(events, list) else []
+    record = _object(security_object)
+    root = _expected_root(record)
+    run("input", lambda: check(VALID if isinstance(events, list) else INVALID,
+                               "EVENT_LIST" if isinstance(events, list) else "MALFORMED_EVENT_LIST"))
+    run("structure", lambda: check_structure(supplied))
+    versions = [_object(_object(e).get("Security")).get("Version") for e in supplied]
+    if "VCPVersion" in record:
+        versions.append(record["VCPVersion"])
+    run("version", lambda: check(VALID if versions and all(v == "1.1" for v in versions)
+                                 else INDETERMINATE, "LEGACY_1_1_ONLY; no v1.2 or conformance verdict"))
+    run("event_hash", lambda: check_hashes(supplied))
+    run("sequence", lambda: check_sequence(supplied))
+    run("prev_hash", lambda: check_prevhash(supplied))
+    run("policy_fields", lambda: check_policy(supplied))
+    # Evaluate every signature even if another event/field cannot be processed.
+    signature_results = []
+    for event in supplied:
+        security = _object(_object(event).get("Security"))
+        signature_results.append(_guard(lambda s=security: verify_digest_signature(
+            s.get("Signature"), s.get("EventHash"), s.get("SignAlgo"), public_key, signature_message)))
+    run("event_signatures", lambda: combine(signature_results))
+
+    def record_shape() -> Dict[str, str]:
+        if security_object is None:
+            return check(INDETERMINATE, "ANCHOR_RECORD_MISSING")
+        if not isinstance(security_object, dict):
+            return check(INVALID, "MALFORMED_ANCHOR_RECORD")
+        if root is MISSING:
+            return check(INDETERMINATE, "EXPECTED_ROOT_MISSING")
+        if not _hex(root):
+            return check(INVALID, "MALFORMED_EXPECTED_ROOT")
+        nested = _object(record.get("MerkleTree")).get("Root", MISSING)
+        if nested is not MISSING and (not _hex(nested) or root.lower() != nested.lower()):
+            return check(INVALID, "CONFLICTING_EXPECTED_ROOTS")
+        return check(VALID, "ROOT_FIELD_SHAPE_ONLY")
+    run("anchor_record", record_shape)
+
+    def merkle() -> Dict[str, str]:
+        if not supplied or not _hex(root):
+            return check(INDETERMINATE, "BATCH_OR_EXPECTED_ROOT_UNAVAILABLE")
+        hashes = [_object(_object(e).get("Security")).get("EventHash") for e in supplied]
+        if any(not _hex(h) for h in hashes):
+            return check(INDETERMINATE, "MERKLE_INPUT_UNAVAILABLE")
+        matched = compute_legacy_merkle_root(hashes) == root.lower()
+        return check(VALID if matched else INVALID,
+                     "LEGACY_DUPLICATE_ODD_ROOT_MATCH" if matched else "LEGACY_ROOT_MISMATCH")
+    run("merkle_root", merkle)
+
+    def bounds() -> Dict[str, str]:
+        if not supplied or security_object is None:
+            return check(INDETERMINATE, "BATCH_BOUNDS_INPUT_UNAVAILABLE")
+        comparisons = [("EventCount", len(supplied)),
+                       ("FirstSequence", _object(_object(supplied[0]).get("Header")).get("Sequence")),
+                       ("LastSequence", _object(_object(supplied[-1]).get("Header")).get("Sequence"))]
+        results = []
+        for field, actual in comparisons:
+            declared = record.get(field, MISSING)
+            if declared is MISSING or actual is None:
+                results.append(check(INDETERMINATE, field + "_MISSING"))
+            elif not _integer(declared) or declared != actual:
+                results.append(check(INVALID, field + "_MISMATCH"))
+            else:
+                results.append(check(VALID, field + "_MATCH"))
+        # This is local consistency, NOT authenticated metadata or INT-008.
+        result = combine(results)
+        result["reason"] += "; local fields only; root signature does not cover metadata"
+        return result
+    run("batch_bounds_local", bounds)
+    run("anchor_signature", lambda: verify_digest_signature(
+        record.get("Signature"), root, record.get("SignAlgo"), public_key, signature_message))
+    run("authenticated_batch_metadata", lambda: check(INDETERMINATE,
+        "NOT_IMPLEMENTED; root-only signature does not authenticate count, range or policy"))
+    def audit_paths() -> Dict[str, str]:
+        if not supplied or not _hex(root):
+            return check(INDETERMINATE, "INCLUSION_ROOT_OR_EVENTS_UNAVAILABLE")
+        results = []
+        for index, event in enumerate(supplied):
+            security = _object(_object(event).get("Security"))
+            path = security.get("AuditPath", MISSING)
+            digest = security.get("EventHash")
+            if path is MISSING or path is None:
+                results.append(check(INDETERMINATE, "AUDIT_PATH_MISSING"))
+                continue
+            if not isinstance(path, list):
+                results.append(check(INVALID, "MALFORMED_AUDIT_PATH"))
+                continue
+            if not _hex(digest):
+                results.append(check(INDETERMINATE, "INCLUSION_LEAF_UNAVAILABLE"))
+                continue
+            position = security.get("MerkleIndex", MISSING)
+            if position is MISSING:
+                results.append(check(INDETERMINATE, "MERKLE_INDEX_MISSING"))
+                continue
+            if not _integer(position) or position != index:
+                results.append(check(INVALID, "MERKLE_INDEX_MISMATCH"))
+                continue
+            node = rfc6962_leaf_hash(bytes.fromhex(digest))
+            width, used = len(supplied), 0
+            valid = True
+            # Verify the known historical construction, not arbitrary path folds.
+            for sibling in path:
+                if width <= 1 or not isinstance(sibling, dict) or not _hex(sibling.get("hash")):
+                    valid = False
+                    break
+                expected_side = "left" if position % 2 else "right"
+                other = bytes.fromhex(sibling["hash"])
+                if sibling.get("position") != expected_side:
+                    valid = False
+                    break
+                if position % 2 == 0 and position + 1 == width and other != node:
+                    valid = False
+                    break
+                node = (rfc6962_node_hash(other, node) if expected_side == "left"
+                        else rfc6962_node_hash(node, other))
+                width, position, used = (width + 1) // 2, position // 2, used + 1
+            valid = valid and width == 1 and used == len(path) and node.hex() == root.lower()
+            results.append(check(VALID if valid else INVALID,
+                                 "LEGACY_INCLUSION_MATCH" if valid else "INCLUSION_MISMATCH"))
+        return combine(results)
+    run("audit_path", audit_paths)
+    def external() -> Dict[str, str]:
+        if not _hex(root):
+            return check(INDETERMINATE, "EXTERNAL_ANCHOR_ROOT_UNAVAILABLE")
+        if external_anchor_verifier is None:
+            return check(INDETERMINATE, "EXTERNAL_ANCHOR_VERIFIER_UNAVAILABLE")
+        return external_anchor_verifier(root.lower(), record)
+    run("external_anchor", external)
+    overall = combine(list(checks.values()))["status"]
+    return {"report_version": 2, "status": overall, "events_total": len(supplied),
+            "checks": checks, "conformance_claim": False,
+            "verification_context": "repository legacy v1.1 evidence format only",
+            "notes": ["No external-implementation, independent-reproduction or certification claim.",
+                      "Historical signed bytes are never rewritten.",
+                      "Full schema and authenticated batch metadata checks are not implemented."]}
+
+
+def _reject_constant(value: str) -> None:
+    raise ValueError("Non-finite JSON number: " + value)
+
+
+def _unique_object(pairs: List[Any]) -> Dict[str, Any]:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON key: " + key)
+        result[key] = value
+    return result
+
+
+def _json(text: str) -> Any:
+    return json.loads(text, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+
+
+def load_events(filepath: str) -> List[Dict[str, Any]]:
     events = []
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                events.append(json.loads(line))
+    with open(filepath, encoding="utf-8") as handle:
+        for number, line in enumerate(handle, 1):
+            if line.strip():
+                item = _json(line)
+                if not isinstance(item, dict):
+                    raise ValueError("Event on line %d is not an object" % number)
+                events.append(item)
     return events
 
-def load_security_object(filepath: str) -> Dict:
-    """Load security object."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
-def print_report(results: Dict, merkle_result: Tuple[bool, str], events: List[Dict]):
-    """Print verification report."""
-    print("=" * 70)
-    print("VCP v1.1 Verification Report - Fully Compliant")
-    print("=" * 70)
-    print(f"Generated: {datetime.now().isoformat()}")
-    print()
-    
-    if events:
-        header = events[0].get('Header', {})
-        policy = events[0].get('PolicyIdentification', {})
-        security = events[0].get('Security', {})
-        
-        print("[Event Summary]")
-        print(f"  VCP Version: {security.get('Version', 'N/A')}")
-        print(f"  Policy ID: {policy.get('PolicyID', 'N/A')}")
-        print(f"  Conformance Tier: {policy.get('ConformanceTier', 'N/A')}")
-        print(f"  Agent ID: {header.get('AgentID', 'N/A')}")
-        
-        first_ts = events[0].get('Header', {}).get('TimestampISO', 'N/A')
-        last_ts = events[-1].get('Header', {}).get('TimestampISO', 'N/A')
-        print(f"  Date Range: {first_ts[:10]} to {last_ts[:10]}")
-        print()
-    
-    print("[Verification Results]")
-    status_icon = "PASS" if results["status"] == "VALID" else "FAIL"
-    print(f"  Overall Status: [{status_icon}] {results['status']}")
-    print(f"  Total Events: {results['events_total']}")
-    print(f"  Valid Events: {results['events_valid']}")
-    print(f"  Invalid Events: {results['events_invalid']}")
-    print()
-    
-    print("[VCP v1.1 Compliance]")
-    sec_status = "PASS" if results["security_valid"] else "FAIL"
-    pol_status = "PASS" if results["policy_valid"] else "FAIL"
-    print(f"  Security Object Schema: [{sec_status}]")
-    print(f"  Policy Identification: [{pol_status}]")
-    print()
-    
-    print("[Chain Integrity (Three-Layer Architecture)]")
-    seq_status = "PASS" if results["sequence_valid"] else "FAIL"
-    prev_status = "PASS" if results["prevhash_valid"] else "FAIL"
-    merkle_status = "PASS" if merkle_result[0] else "FAIL"
-    
-    print(f"  Layer 1 - Event Hash: [{status_icon}]")
-    print(f"  Layer 1 - Sequence: [{seq_status}]")
-    print(f"  Layer 1 - PrevHash: [{prev_status}]")
-    print(f"  Layer 2 - Merkle Root (RFC 6962): [{merkle_status}]")
-    if merkle_result[0]:
-        print(f"    Root: {merkle_result[1][:32]}...")
-    else:
-        print(f"    {merkle_result[1]}")
-    print()
-    
-    if results["errors"]:
-        print("[Errors Detected]")
-        for err in results["errors"][:10]:
-            print(f"  - {err}")
-        if len(results["errors"]) > 10:
-            print(f"  ... and {len(results['errors']) - 10} more errors")
-        print()
-    
-    print("=" * 70)
-    final_status = "All checks passed - VCP v1.1 Compliant" if results["status"] == "VALID" and merkle_result[0] else "Issues detected"
-    print(f"Verification complete: {final_status}")
-    print("=" * 70)
+def load_security_object(filepath: str) -> Dict[str, Any]:
+    item = _json(Path(filepath).read_text(encoding="utf-8"))
+    if not isinstance(item, dict):
+        raise ValueError("Security object must be a JSON object")
+    return item
 
-def main():
-    """Main entry point."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='VCP v1.1 Chain Verifier - Fully Compliant')
-    parser.add_argument('events_file', help='JSONL file containing events')
-    parser.add_argument('--security-object', '-s', help='Security object JSON file')
-    parser.add_argument('--output', '-o', help='Output report file')
-    
-    args = parser.parse_args()
-    
-    print(f"Loading events: {args.events_file}")
-    events = load_events(args.events_file)
-    print(f"  {len(events)} events loaded")
-    
-    expected_merkle = None
-    if args.security_object:
-        print(f"Loading security object: {args.security_object}")
-        security_obj = load_security_object(args.security_object)
-        # Support both direct MerkleRoot and nested MerkleTree.Root (backward compatible)
-        expected_merkle = (
-            security_obj.get('MerkleRoot')
-            or security_obj.get('MerkleTree', {}).get('Root')
-        )
-    
-    print("\nVerifying chain integrity (VCP v1.1)...")
-    results = verify_chain(events)
-    
-    if expected_merkle:
-        merkle_result = verify_merkle_root(events, expected_merkle)
-    else:
-        # Compute Merkle root if not provided
-        event_hashes = [e.get('Security', {}).get('EventHash', '') for e in events]
-        computed = compute_rfc6962_merkle_root(event_hashes)
-        merkle_result = (True, computed)
-    
-    print()
-    print_report(results, merkle_result, events)
-    
+
+def load_public_key(filepath: str) -> bytes:
+    """Trust is an explicit caller decision, not inferred from an evidence file."""
+    raw = Path(filepath).read_bytes()
+    if len(raw) == 32:
+        return raw
+    text = raw.decode("utf-8").strip()
+    if text.startswith("{"):
+        text = _json(text).get("PublicKey")
+    if not isinstance(text, str):
+        raise ValueError("Expected a raw, hex, base64 or PublicKey JSON key")
+    key = bytes.fromhex(text) if _hex(text) else base64.b64decode(text, validate=True)
+    if len(key) != 32:
+        raise ValueError("Ed25519 public key must be 32 bytes")
+    return key
+
+
+def render_report(report: Dict[str, Any]) -> str:
+    lines = ["Legacy VCP v1.1 evidence verification (not a conformance assessment)",
+             "Generated: " + datetime.now(timezone.utc).isoformat(),
+             "Overall Status: " + report["status"], "Total Events: " + str(report["events_total"])]
+    lines.extend("%s: %s (%s)" % (name, result["status"], result["reason"])
+                 for name, result in report["checks"].items())
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("events_file")
+    parser.add_argument("--security-object", "-s")
+    parser.add_argument("--public-key", help="File containing an explicitly trusted Ed25519 key")
+    parser.add_argument("--signature-message", choices=("raw_digest", "ascii_hex"), default="raw_digest")
+    parser.add_argument("--output", "-o")
+    parser.add_argument("--json", action="store_true", help="Emit report format version 2")
+    args = parser.parse_args(argv)
+    try:
+        events = load_events(args.events_file)
+    except (OSError, ValueError, UnicodeError, RecursionError) as exc:
+        print("Cannot load events: " + str(exc), file=sys.stderr)
+        return 3
+    record = key = None
+    unavailable = {}
+    # Optional input errors do not suppress checks on the successfully loaded input.
+    for name, path, loader in (("security_object_input", args.security_object, load_security_object),
+                               ("public_key_input", args.public_key, load_public_key)):
+        if path:
+            try:
+                value = loader(path)
+                if name == "security_object_input":
+                    record = value
+                else:
+                    key = value
+            except (OSError, ValueError, UnicodeError, RecursionError) as exc:
+                unavailable[name] = check(INDETERMINATE, "INPUT_UNAVAILABLE:" + type(exc).__name__)
+    report = verify_chain(events, record, key, signature_message=args.signature_message)
+    report["checks"].update(unavailable)
+    report["status"] = combine(list(report["checks"].values()))["status"]
+    text = json.dumps(report, indent=2, ensure_ascii=False) + "\n" if args.json else render_report(report)
+    print(text, end="")
     if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
-            f.write("VCP v1.1 Verification Report - Fully Compliant\n")
-            f.write("=" * 70 + "\n")
-            f.write(f"Generated: {datetime.now().isoformat()}\n\n")
-            f.write(f"Overall Status: {results['status']}\n")
-            f.write(f"Total Events: {results['events_total']}\n")
-            f.write(f"Valid Events: {results['events_valid']}\n")
-            f.write(f"Invalid Events: {results['events_invalid']}\n")
-            f.write(f"Security Object Schema: {'OK' if results['security_valid'] else 'NG'}\n")
-            f.write(f"Policy Identification: {'OK' if results['policy_valid'] else 'NG'}\n")
-            f.write(f"Sequence Continuity: {'OK' if results['sequence_valid'] else 'NG'}\n")
-            f.write(f"PrevHash Integrity: {'OK' if results['prevhash_valid'] else 'NG'}\n")
-            f.write(f"Merkle Root (RFC 6962): {'OK' if merkle_result[0] else 'NG'}\n")
-            if merkle_result[0]:
-                f.write(f"  Root: {merkle_result[1]}\n")
-        print(f"\nReport saved: {args.output}")
-    
-    sys.exit(0 if results["status"] == "VALID" and merkle_result[0] else 1)
+        try:
+            Path(args.output).write_text(text, encoding="utf-8")
+        except OSError as exc:
+            print("Cannot write report: " + str(exc), file=sys.stderr)
+            return 3
+    return EXIT_CODES[report["status"]]
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
