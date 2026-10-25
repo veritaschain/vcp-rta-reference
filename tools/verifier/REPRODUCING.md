@@ -36,15 +36,16 @@ OpenSSL executable/version and direct dependency versions. CI tests Python 3.11
 
 ## What counts as a successful run
 
-The runner currently requires all three suites:
+The runner currently requires all four suites:
 
 | Suite | Minimum collected/executed cases |
 |---|---:|
 | `tests/test_verifier.py` | 135 |
 | `tests/test_attested_batch.py` | 80 |
 | `tests/test_regression_runner.py` | 33 |
+| `tests/test_openssl_trust_store.py` | 2 |
 
-The expected baseline is **248 cases**. Each minimum is checked separately to
+The expected baseline is **250 cases**. Each minimum is checked separately to
 avoid silently dropping one suite. The named real RFC 3161 integration test
 must be present. Pytest must exit zero; any failure, error, skip (including
 expected failures reported as skips), malformed/missing XML, duplicate test ID,
@@ -96,8 +97,24 @@ K3 and fixed reproduction-kit baselines are unchanged.
 
 ## 日本語
 
-実行入口は `python tools/verifier/run_regression.py`。既存215件とランナー33件を
+実行入口は `python tools/verifier/run_regression.py`。既存215件、ランナー33件、CA信頼境界の追加2件を
 まとめて実行し、実行環境・コミット・コードと証拠ファイルのハッシュ・結果を残す。
 スキップ、件数不足、失敗、実行中の入力変更は成功扱いにしない。
 「回帰テスト成功」と「Evidence Packの検証成功」は別であり、独立再現・適合性・
 認証の成立を自動宣言しない。過去の署名済み証拠や規範仕様は変更しない。
+
+## OpenSSL 3.0 portability correction
+
+The first CI run exposed four previously passing timestamp tests failing with
+OpenSSL 3.0.13. Diagnostics identified `Error loading store URI` for an empty
+`-CAstore` directory. The verifier now supplies the exact same caller-selected
+CA bundle through both `-CAfile` and `-CAstore`, keeping `-CApath` empty and
+overriding environment certificate paths. No additional trust root or fallback
+is introduced, and nonzero verifier exits remain INDETERMINATE. Two new actual
+local-TSA tests check this command contract and rejection of a wrong caller CA
+even when the correct chain is available as untrusted material or environment
+trust. Existing 215 tests and historical evidence are unchanged.
+
+A failure-only CI diagnostic regenerates a disposable synthetic timestamp and
+prints bounded OpenSSL stderr. It does not change the regression outcome, use
+production keys, or upload the generated private key.
