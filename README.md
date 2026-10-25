@@ -1,3 +1,16 @@
+> **Verifier runtime update, 26 October 2026.** The default CLI now evaluates
+> Ed25519 signatures with an explicitly trusted key and reports VALID, INVALID or
+> INDETERMINATE per check. Missing inputs no longer become passes or hide other
+> mismatches. This is a first-party legacy-format tool, not a conformance claim.
+> The CLI does not verify external anchors, and authenticated batch metadata is
+> not implemented, so it does not return an overall VALID result. Historical
+> evidence and reports are unchanged; their old all-pass output is not current.
+> See [current behavior, limitations and migration](tools/verifier/README.md).
+>
+> **検証器更新（2026-10-26）:** 提案書だけでなく実行コードを更新しました。
+> 検証材料不足は未検証とし、検出できた不一致を隠しません。外部アンカーの実証明検証・
+> バッチメタデータの認証は未実装です。旧レポートは保存し、現在の適合証明とは扱いません。
+
 ## 🔗 Related Reference Implementations (Other Platforms)
 
 ### cTrader
@@ -105,7 +118,8 @@ vcp_v1_1_repo_aligned/
 
 ### Prerequisites
 - Python 3.8+
-- No external dependencies required (standard library only)
+- Standard-library checks can run alone; install `cryptography` for Ed25519 verification.
+- No key is trusted automatically. See [verifier instructions](tools/verifier/README.md).
 
 ### Run Verification
 
@@ -126,25 +140,24 @@ python tools\verifier\vcp_verifier.py evidence\01_trade_logs\vcp_rta_events.json
 python evidence/03_tamper_detection/tamper_detection_test.py
 ```
 
-### Expected Output
+### Reading the Result
 
-```
-======================================================================
-VCP v1.1 Verification Report
-======================================================================
-[Verification Results]
-  Overall Status: [PASS] VALID
-  Total Events: 40
-  Valid Events: 40
-  Invalid Events: 0
+The previous all-pass example was removed on 26 October 2026. The commands above
+supply neither an explicitly trusted key nor an external-anchor verifier. Those
+checks are INDETERMINATE, not successful verification. A demonstrated mismatch
+in any executed check takes precedence and produces INVALID.
 
-[Chain Integrity]
-  Sequence Continuity: [PASS]
-  PrevHash Integrity: [PASS]
-  Merkle Root: [PASS]
-======================================================================
-Verification complete: All checks passed
-======================================================================
+Exit codes are 1 for INVALID, 2 for INDETERMINATE, and 3 for unreadable event input
+or output failure. Add `--json` for report format version 2. `--public-key PATH`
+enables real Ed25519 verification under the caller's key-trust decision; it does
+not establish key ownership. No VCP/VAP conformance or certification is asserted.
+
+The historical reports and test scripts under `evidence/` are preserved, not
+rewritten as new verification results. Current regression tests are separate:
+
+```sh
+python -m pip install pytest cryptography
+python -m pytest -q tests/test_verifier.py
 ```
 
 ---
