@@ -77,8 +77,14 @@ negative fixtures' classes; it is not an independent-party audit.
 The ten targeted false-pass cases fail against the exact baseline runtime;
 all 78 new cases pass locally after this correction. The main runner requires
 520 cases (442 previous + 78 new). The 15 historical-pack cases remain in their
-separate workflow. Full CI outcomes are recorded in the PR after execution.
-No existing test is removed or weakened; dependencies and workflows are unchanged.
+separate workflow. The first CI attempt found that the historical wrong-key
+test used an all-zero key, which is a small-order point. That test now uses a
+generated valid but unrelated key and retains its INVALID assertions, including
+a new root-signature assertion. The all-zero case remains in the same test with
+explicit INDETERMINATE/key-rejected assertions and input-preservation checks.
+The actual reference-key replay output was unchanged in the initial run.
+No test was removed or skipped. Full CI outcomes are recorded in the PR after
+execution; dependencies and workflows are unchanged.
 
 ## 日本語
 
