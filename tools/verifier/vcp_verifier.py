@@ -48,7 +48,7 @@ ExternalVerifier = Callable[[str, Dict[str, Any]], Dict[str, str]]
 
 
 def check(status: str, reason: str) -> Dict[str, str]:
-    if status not in EXIT_CODES or not isinstance(reason, str) or not reason:
+    if not isinstance(status, str) or status not in EXIT_CODES or not isinstance(reason, str) or not reason:
         raise ValueError("A check needs a known status and a nonempty reason")
     return {"status": status, "reason": reason}
 
@@ -57,7 +57,8 @@ def combine(checks: List[Dict[str, str]]) -> Dict[str, str]:
     """Empty or malformed result sets are not successful verification."""
     if not checks:
         return check(INDETERMINATE, "NO_CHECKS")
-    malformed = any(not isinstance(c, dict) or c.get("status") not in EXIT_CODES
+    malformed = any(not isinstance(c, dict) or not isinstance(c.get("status"), str)
+                    or c.get("status") not in EXIT_CODES
                     or not isinstance(c.get("reason"), str) or not c["reason"] for c in checks)
     statuses = [c.get("status") for c in checks if isinstance(c, dict)]
     if INVALID in statuses:
