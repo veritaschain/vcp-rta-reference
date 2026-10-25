@@ -197,7 +197,7 @@ def verify_rfc3161(data: bytes, response: Optional[bytes], ca_pem: Optional[byte
     """Archived token check: SHA-256 imprint, TSP policy, signature and CA chain.
 
     No network, nonce/freshness, CRL/OCSP, qualified-TSA or legal-time assessment.
-    Trust is only the caller's CA bundle, with empty directory/store fallbacks.
+    Trust is only the caller's CA bundle, with an empty directory fallback.
     Unknown execution/chain failures remain INDETERMINATE, never success.
     """
     if not isinstance(response, bytes) or not response:
@@ -243,9 +243,11 @@ def verify_rfc3161(data: bytes, response: Optional[bytes], ca_pem: Optional[byte
                 (d / name).write_bytes(value)
             (d / "empty").mkdir()
             (d / "openssl.cnf").write_text("# No evidence-supplied configuration.\n", encoding="ascii")
+            # OpenSSL 3.0 rejects a load-store URI with no certificate objects.
+            # Use the SAME caller CA bundle in both channels, not OS defaults.
             cmd = [executable, "ts", "-verify", "-data", str(d / "payload.bin"),
                    "-in", str(d / "response.tsr"), "-CAfile", str(d / "ca.pem"),
-                   "-CApath", str(d / "empty"), "-CAstore", (d / "empty").as_uri()]
+                   "-CApath", str(d / "empty"), "-CAstore", (d / "ca.pem").as_uri()]
             if untrusted_pem:
                 (d / "untrusted.pem").write_bytes(untrusted_pem)
                 cmd += ["-untrusted", str(d / "untrusted.pem")]

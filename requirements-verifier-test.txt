@@ -1,0 +1,5 @@
+# Direct test dependencies only; not a complete transitive or OS lockfile.
+# Baseline used for the first-party 2026-10-26 verifier regression runs.
+pytest==9.0.2
+cryptography==46.0.4
+asn1crypto==1.5.1

@@ -41,9 +41,11 @@ extension does not turn those constructions into JCS or strict RFC 6962 MTH.
 
 ## Run
 
-Tested locally with Python 3.13.5, cryptography 46.0.4, asn1crypto 1.5.1,
-pytest 9.0.2 and OpenSSL 3.5.5. Use an OpenSSL 3.x executable on PATH;
-other versions/platforms were not exercised here.
+Initially tested locally with Python 3.13.5, cryptography 46.0.4, asn1crypto 1.5.1,
+pytest 9.0.2 and OpenSSL 3.5.5. Use an OpenSSL 3.x executable on PATH.
+The later CI portability correction and repeatable full test command are
+recorded in [REPRODUCING.md](REPRODUCING.md); do not infer coverage of other
+OpenSSL versions or platforms from a single run.
 
 ```sh
 python -m pip install cryptography==46.0.4 asn1crypto==1.5.1
@@ -139,8 +141,10 @@ expected policy, token signature, and certificate chain. `external_anchor`
 combines that token check with authenticated batch bindings.
 
 OpenSSL runs without a shell, with fixed arguments, a 15-second timeout, copied
-local inputs, an explicit CA file and empty CA directory/store fallbacks. A
-2 MiB limit applies to supplemental envelopes, timestamp and certificate files.
+local inputs, the same explicit caller CA bundle for both CAfile and CAstore,
+and an empty CA directory. An empty CAstore is not used: OpenSSL 3.0.13 rejects
+it before verification. No OS trust fallback is introduced.
+A 2 MiB limit applies to supplemental envelopes, timestamp and certificate files.
 No code, configuration, URL or trust root is loaded from statement fields.
 Unknown verifier/certificate-chain failures stay INDETERMINATE. A malformed
 response or demonstrated imprint/policy mismatch is INVALID. A failed exit is
@@ -164,7 +168,9 @@ python -m pip install cryptography==46.0.4 asn1crypto==1.5.1 pytest==9.0.2
 python -m pytest -q tests/test_verifier.py tests/test_attested_batch.py
 ```
 
-The local run on 2026-10-26 passed **215 tests: 135 unchanged + 80 new**.
+The initial local run on 2026-10-26 passed **215 tests: 135 unchanged + 80 new**.
+The current full runner, additional CA-store tests, CI and report format are
+specified in [REPRODUCING.md](REPRODUCING.md).
 Tests use synthetic batches, actual Ed25519 signatures, and an ephemeral local
 CA/TSA issuing actual signed RFC 3161 responses through OpenSSL. They check
 imprint/policy mismatch, wrong trust root, signature alteration, missing input,
