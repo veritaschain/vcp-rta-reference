@@ -414,28 +414,51 @@ def verify_chain(events: List[Any], security_object: Optional[Dict[str, Any]] = 
     run("authenticated_batch_metadata", lambda: check(INDETERMINATE,
         "NOT_IMPLEMENTED; root-only signature does not authenticate count, range or policy"))
     def audit_paths() -> Dict[str, str]:
-        if not supplied or not _hex(root):
+        if not supplied:
             return check(INDETERMINATE, "INCLUSION_ROOT_OR_EVENTS_UNAVAILABLE")
         results = []
         for index, event in enumerate(supplied):
             security = _object(_object(event).get("Security"))
             path = security.get("AuditPath", MISSING)
             digest = security.get("EventHash")
+            position = security.get("MerkleIndex", MISSING)
+            # This API takes the complete ordered batch. Path representation,
+            # topology and the declared position can be checked without a root,
+            # leaf digest or trusted key. Missing fields cannot hide each other.
+            preflight = []
             if path is MISSING or path is None:
-                results.append(check(INDETERMINATE, "AUDIT_PATH_MISSING"))
+                preflight.append(check(INDETERMINATE, "AUDIT_PATH_MISSING"))
+            elif not isinstance(path, list):
+                preflight.append(check(INVALID, "MALFORMED_AUDIT_PATH"))
+            else:
+                width, cursor, shaped = len(supplied), index, True
+                for sibling in path:
+                    if (width <= 1 or not isinstance(sibling, dict)
+                            or not _hex(sibling.get("hash"))
+                            or sibling.get("position") != ("left" if cursor % 2 else "right")):
+                        shaped = False
+                        break
+                    width, cursor = (width + 1) // 2, cursor // 2
+                shaped = shaped and width == 1
+                preflight.append(check(VALID if shaped else INVALID,
+                    "LEGACY_PATH_SHAPE_ONLY" if shaped else "INCLUSION_MISMATCH"))
+            if position is MISSING:
+                preflight.append(check(INDETERMINATE, "MERKLE_INDEX_MISSING"))
+            elif not _integer(position) or position != index:
+                preflight.append(check(INVALID, "MERKLE_INDEX_MISMATCH"))
+            else:
+                preflight.append(check(VALID, "SUPPLIED_BATCH_POSITION_ONLY"))
+            syntax = combine(preflight)
+            if syntax["status"] != VALID:
+                results.append(syntax)
                 continue
-            if not isinstance(path, list):
-                results.append(check(INVALID, "MALFORMED_AUDIT_PATH"))
+            # A syntactically valid path is not an inclusion proof. Do not
+            # substitute a self-computed root for an unavailable expected root.
+            if not _hex(root):
+                results.append(check(INDETERMINATE, "INCLUSION_ROOT_OR_EVENTS_UNAVAILABLE"))
                 continue
             if not _hex(digest):
                 results.append(check(INDETERMINATE, "INCLUSION_LEAF_UNAVAILABLE"))
-                continue
-            position = security.get("MerkleIndex", MISSING)
-            if position is MISSING:
-                results.append(check(INDETERMINATE, "MERKLE_INDEX_MISSING"))
-                continue
-            if not _integer(position) or position != index:
-                results.append(check(INVALID, "MERKLE_INDEX_MISMATCH"))
                 continue
             node = rfc6962_leaf_hash(bytes.fromhex(digest))
             width, used = len(supplied), 0
