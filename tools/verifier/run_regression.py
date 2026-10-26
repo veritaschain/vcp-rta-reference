@@ -21,7 +21,8 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[2]
 SUITES = {"test_verifier": 135, "test_attested_batch": 80, "test_regression_runner": 33,
           "test_openssl_trust_store": 2, "test_report_output": 51, "test_input_limits": 75,
-          "test_result_aggregation": 66, "test_ed25519_key_admission": 78}
+          "test_result_aggregation": 66, "test_ed25519_key_admission": 78,
+          "test_timestamp_policy": 50}
 REQUIRED_TEST = ("test_attested_batch", "test_real_rfc3161_response_signature_chain_and_imprint")
 DEPENDENCIES = ("pytest", "cryptography", "asn1crypto")
 LIMIT = 16 * 1024 * 1024
