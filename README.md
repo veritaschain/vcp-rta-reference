@@ -51,6 +51,17 @@ order submissions; the previous "Order Events" label has been corrected.
 A passing regression means the expected results were reproduced, not that the
 evidence received an overall `VALID` verdict.
 
+## Fixed-checkpoint reproduction
+
+For a review of one fixed version, use the [26 October 2026 checkpoint](docs/REPRODUCTION_CHECKPOINT_2026-10-26.md),
+its [machine-readable reference](docs/REPRODUCTION_CHECKPOINT_2026-10-26.json), and the
+[reviewer report template](docs/REVIEWER_REPORT_TEMPLATE.md). The checkpoint pins
+`cc695fe1698250878fbbc5f0c5461591ac8e0954`: 809 regression cases plus 15 historical
+cases per environment in the recorded first-party CI. Those counts describe
+that commit, not an automatically updated claim about every future main.
+External reproduction remains **not established**. This is not a new release
+or a replacement for earlier fixed kits.
+
 ## Run
 
 The current regression workflows exercise Python 3.11 and 3.13.5 on Ubuntu 24.04.
@@ -75,7 +86,7 @@ Use `--public-key /path/to/trusted-key` with the default verifier only after
 establishing trust separately. Do not infer trust from an embedded public key.
 
 ```sh
-# Existing synthetic regression suite: 250 cases.
+# Registered regression suites; counts are defined by this checkout's runner.
 python tools/verifier/run_regression.py
 # Fixed-pack regression suite: 15 cases, including in-memory tampering tests.
 python -m pytest -q tests/test_historical_evidence.py

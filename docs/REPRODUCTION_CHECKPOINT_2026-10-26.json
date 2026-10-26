@@ -1,0 +1,147 @@
+{
+  "format": "vcp-rta-reproduction-checkpoint-v1",
+  "checkpoint_id": "2026-10-26-pr14",
+  "repository": "https://github.com/veritaschain/vcp-rta-reference",
+  "checkout_commit": "cc695fe1698250878fbbc5f0c5461591ac8e0954",
+  "git_tree": "52bcbe53daaaecf0ad45f1e65f251d945854eee1",
+  "reference_ci": {
+    "pull_request": 14,
+    "head_commit": "fb2317aec79f713534115eab1e7b4b6b2feca4fc",
+    "executed_merge_commit": "0314e019d6741fb9b44ca08fd7e6ad85f6373323",
+    "executed_git_tree": "52bcbe53daaaecf0ad45f1e65f251d945854eee1",
+    "artifacts": [
+      {
+        "kind": "regression",
+        "python": "3.11.17",
+        "run_id": 40258239286,
+        "artifact_id": 12623034103,
+        "archive_sha256": "714796e1afd3858ace539400b74cb49aa066b62fd0b76f583706ab0ebd9a7a7b",
+        "test_cases": 809
+      },
+      {
+        "kind": "regression",
+        "python": "3.13.5",
+        "run_id": 40258239286,
+        "artifact_id": 12623452393,
+        "archive_sha256": "723c8580f734ea5b3954ce50305adf69a715c0411d78a9593d808473e06e2a0d",
+        "test_cases": 809
+      },
+      {
+        "kind": "historical",
+        "python": "3.11.17",
+        "run_id": 40258239228,
+        "artifact_id": 12622984119,
+        "archive_sha256": "35340fce559b10c81d512a76158934c7c8032bc3ce00591b3e2c648883054d58",
+        "test_cases": 15
+      },
+      {
+        "kind": "historical",
+        "python": "3.13.5",
+        "run_id": 40258239228,
+        "artifact_id": 12623233468,
+        "archive_sha256": "dd13ed7c47e0c0dba1c36782e754c561a8e53c9a2717cec94105dfe0f5f9ae2d",
+        "test_cases": 15
+      }
+    ],
+    "artifact_retention_days": 30
+  },
+  "scope": "First-party recorded checkpoint, not an external reproduction result, certification, or a new release.",
+  "external_reproduction_status": "NOT_ESTABLISHED",
+  "test_expectations": {
+    "regression_cases": 809,
+    "regression_by_suite": {
+      "test_attested_batch": 80,
+      "test_ed25519_key_admission": 78,
+      "test_input_limits": 75,
+      "test_junit_integrity": 87,
+      "test_merkle_preflight": 72,
+      "test_openssl_trust_store": 2,
+      "test_regression_runner": 33,
+      "test_report_output": 51,
+      "test_result_aggregation": 66,
+      "test_signature_preflight": 53,
+      "test_suite_inventory": 27,
+      "test_timestamp_policy": 50,
+      "test_verifier": 135
+    },
+    "historical_cases": 15,
+    "total_per_environment": 824,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reference_environment": {
+    "os": "ubuntu-24.04 GitHub-hosted runner",
+    "python": [
+      "3.11.17",
+      "3.13.5"
+    ],
+    "openssl": "3.0.13",
+    "direct_dependencies": {
+      "pytest": "9.0.2",
+      "cryptography": "46.0.4",
+      "asn1crypto": "1.5.1"
+    },
+    "complete_environment_lock": false
+  },
+  "replay_expectations": {
+    "execution_status": "completed",
+    "evidence_verdict": "INDETERMINATE",
+    "conformance_claim": false,
+    "key_identity_established": false,
+    "original_anchor_confirmed": false,
+    "event_count": 40,
+    "event_types": {
+      "EXE": 20,
+      "SIG": 20
+    },
+    "legacy_merkle_root": "86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e",
+    "strict_rfc6962_root_comparison_only": "4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3",
+    "reference_key_fingerprint_sha256": "65ea2f698c8cd0750a274493b044fc31c4a5ec84db612ce05a1b48a0a2a9d051",
+    "ots_files_present_not_verified": []
+  },
+  "replay_expected_exit": 2,
+  "reference_key_unresolved_checks": [
+    "authenticated_batch_metadata",
+    "external_anchor",
+    "prev_hash"
+  ],
+  "input_sha256": {
+    "evidence/01_trade_logs/vcp_rta_events.jsonl": "05ab442f48bff64a3ca72d16494a9c5cb668d08a153978c72dd93bbfb100fcad",
+    "evidence/02_verification/verification_report.txt": "b2b6d20cf9fc336f29876130f09bbf5482d916c659fdff9354e96bc132665204",
+    "evidence/03_tamper_detection/tamper_detection_test.py": "92cdb0cf2cefb91956d0bc497a8cf8bf1e6a9e11d9fb29ff270c47d74192916a",
+    "evidence/03_tamper_detection/tampered_chain.jsonl": "d4e3b48f7d46944e527cd577ada3ccf383a97d34dab3fbe31f25be10bd463380",
+    "evidence/04_anchor/anchor_reference.json": "3b5f1190dd1ff0daffb4f97b26212ce43b70397bf6faee42abb7724ad64cab2b",
+    "evidence/04_anchor/public_key.json": "63e20442215e8165926903d31c8ca00291195677d7e3746e721047dc2631af8a",
+    "evidence/04_anchor/security_object.json": "f7eb8cb178dcecfa4540e0299702ab3e51b60b821c0f1bd40ef96c3b1f4494c7",
+    "evidence/Evidence-Pack-Generated-screenshot.png": "bcdc4c5755a8dd27a7aa610493269acfcfcddce0d74dea4d5c560297fd8d9933",
+    "evidence/evidence_index.json": "8e8154db38f7f319570364a4e125aee3c76e250e17ee87b45da87848a526788d",
+    "evidence/side-car-screenshot.png": "e9922083797c0e78cb9773930e23f375d2efa05f01581bdbd7389206bcb99248",
+    "requirements-verifier-test.txt": "c89cf42722eb2055dfc170aadee794ebe9751e5ef7ef3b99e8088df379100a23",
+    "tests/test_attested_batch.py": "b6d9c0ee914d6ac145aa79c3771195d0c496c0317ddaf06823d59b387d07b4ed",
+    "tests/test_ed25519_key_admission.py": "30401a35a5341d412dd9bd5c2b2d36cb618c156af24070144cdc0900b381d021",
+    "tests/test_historical_evidence.py": "396a8062f54623499da33f9daaedab659367777035cd711a7374506f3d4f0789",
+    "tests/test_input_limits.py": "c7c0f308a063d412b5d39f33c509f430f70565398debb000e9829628ca3a0615",
+    "tests/test_junit_integrity.py": "a10bf088ec4c70c4d818ae98514a2ad60ad5b56a8aee8e007acec74912816c73",
+    "tests/test_merkle_preflight.py": "899fb15e69004d13b4c59640435021040003b5b77084e3a61a3db9ff3b5188bb",
+    "tests/test_openssl_trust_store.py": "3bfcd35550a7cba5aaa9f19ae8cc420169d5cc403fb64178278fca7effe642e9",
+    "tests/test_regression_runner.py": "c89317f4f460ba85d0f21f88eccefe7e39307eb7fc0a7f41a326a3a6d555af02",
+    "tests/test_report_output.py": "b315cf5396d40da7525c074c5cb3752520d85e37bb48b4a6ff6d79d4dda0769b",
+    "tests/test_result_aggregation.py": "60a0a40986a64ea27850ef15178264f2ac161d26adbb4b7951302b64ac4386ea",
+    "tests/test_signature_preflight.py": "3ede7f32664fdbf02f0f67e8e08c180528c94231bd8cf0528e9ebe0d5f471e2e",
+    "tests/test_suite_inventory.py": "5bf413bb2d32a0d47793de0966b050cd7256cd21b69c4943de5d46db5ca21bda",
+    "tests/test_timestamp_policy.py": "cb600d164c66d6b6e0ce65e06c661c35f98a93367ad900d68f743b2ec83236c5",
+    "tests/test_verifier.py": "189d63ad502569e071d61a7bfb950bf3dcd1e0bc987f100dd556794ed57cc629",
+    "tools/verifier/inspect_historical_pack.py": "52c690fa056c0b7e14841538e471c2df4497354a0fbc55e35fd4bda14935f6cb",
+    "tools/verifier/run_regression.py": "b784759bf235c5d914b03546f7ea510aa6b36401181f8ec4697537d23d756033",
+    "tools/verifier/vcp_verifier.py": "009c855e9f6849352a0e752ce77608ece8593192dc65191247f782a1043ddf38",
+    "tools/verifier/verify_attested_batch.py": "86c74d7b435c5efaf8ce9151087853c8cd0745db533c08457a68032d98cf0251"
+  },
+  "limitations": [
+    "Hashes detect changed bytes, not authorship or independence.",
+    "The manifest covers the 29 listed code/test/dependency/evidence files, not a complete OS or transitive dependency lock.",
+    "Reference-key agreement is not key-owner identity or authorization.",
+    "Successful regression reproduces an INDETERMINATE historical evidence verdict.",
+    "This checkpoint does not replace K3, earlier fixed reproduction kits, tags, releases or normative specifications."
+  ]
+}
