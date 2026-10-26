@@ -24,12 +24,59 @@ SUITES = {"test_verifier": 135, "test_attested_batch": 80, "test_regression_runn
           "test_openssl_trust_store": 2, "test_report_output": 51, "test_input_limits": 75,
           "test_result_aggregation": 66, "test_ed25519_key_admission": 78,
           "test_timestamp_policy": 50, "test_signature_preflight": 53,
-          "test_merkle_preflight": 72, "test_suite_inventory": 27}
+          "test_merkle_preflight": 72, "test_suite_inventory": 27, "test_junit_integrity": 87}
 # Explicitly executed by .github/workflows/historical-pack.yml, not this runner.
 SEPARATE_TEST_FILES = frozenset({"test_historical_evidence.py"})
 REQUIRED_TEST = ("test_attested_batch", "test_real_rfc3161_response_signature_chain_and_imprint")
 DEPENDENCIES = ("pytest", "cryptography", "asn1crypto")
 LIMIT = 16 * 1024 * 1024
+
+
+def _parse_junit(data: bytes):
+    """Read this runner's flat pytest XML profile, not arbitrary JUnit dialects.
+
+    Decode before rejecting declarations so alternate byte encodings cannot
+    bypass the no-DTD policy. No entity expansion is needed for these reports.
+    """
+    text = data.decode("utf-8-sig")
+    if "\x00" in text or "<!DOCTYPE" in text or "<!ENTITY" in text:
+        raise ValueError("Unsupported XML encoding or declaration")
+    declaration = re.match(r"<\?xml\s.*?\?>", text, re.DOTALL)
+    if declaration:
+        encoding = re.search(r"\bencoding\s*=\s*(['\"])(.*?)\1", declaration.group())
+        if encoding and encoding.group(2).lower() not in ("utf-8", "utf8"):
+            raise ValueError("JUnit reports must use UTF-8")
+    root = ET.fromstring(text)
+    if root.tag not in ("testsuites", "testsuite"):
+        raise ValueError("Unexpected JUnit root")
+    allowed = {
+        "testsuites": {"testsuite"},
+        "testsuite": {"testcase", "properties", "system-out", "system-err"},
+        "testcase": {"properties", "failure", "error", "skipped", "system-out", "system-err"},
+        "properties": {"property"},
+        "property": set(), "failure": set(), "error": set(), "skipped": set(),
+        "system-out": set(), "system-err": set(),
+    }
+    containers = {"testsuites", "testsuite", "testcase", "properties"}
+    for element in root.iter():
+        if element.tag not in allowed or any(child.tag not in allowed[element.tag] for child in element):
+            raise ValueError("Unexpected JUnit element placement")
+        if element.tag in containers and element.text and element.text.strip():
+            raise ValueError("Unexpected JUnit container text")
+        if element.tail and element.tail.strip():
+            raise ValueError("Unexpected JUnit trailing text")
+    suites = list(root) if root.tag == "testsuites" else [root]
+    if not suites:
+        raise ValueError("No JUnit suites")
+    return root, suites
+
+
+def _junit_counter(element, name: str) -> int:
+    """Canonical nonnegative ASCII count, bounded before integer conversion."""
+    value = element.get(name)
+    if value is None or not re.fullmatch(r"0|[1-9][0-9]{0,19}", value):
+        raise ValueError("Missing or malformed JUnit counter: " + name)
+    return int(value)
 
 
 def assess_junit(path: Path, returncode: int, minimums=None) -> dict:
@@ -42,12 +89,10 @@ def assess_junit(path: Path, returncode: int, minimums=None) -> dict:
     try:
         with path.open("rb") as handle:
             data = handle.read(LIMIT + 1)
-        if len(data) > LIMIT or b"<!DOCTYPE" in data or b"<!ENTITY" in data:
-            raise ValueError("Unsafe or oversized JUnit XML")
-        root = ET.fromstring(data)
-        if root.tag not in ("testsuites", "testsuite"):
-            raise ValueError("Unexpected JUnit root")
-        cases = list(root.iter("testcase"))
+        if len(data) > LIMIT:
+            raise ValueError("Oversized JUnit XML")
+        root, suites = _parse_junit(data)
+        cases = [case for suite in suites for case in suite.findall("testcase")]
         result["cases"] = len(cases)
         counts = Counter()
         identities = set()
@@ -60,12 +105,26 @@ def assess_junit(path: Path, returncode: int, minimums=None) -> dict:
             counts[suite] += 1
             if any(case.find(tag) is not None for tag in ("failure", "error", "skipped")):
                 problems.append("FAILED_ERROR_OR_SKIPPED_CASE")
-        declared = list(root.iter("testsuite"))
-        if not declared or sum(int(s.get("tests", "0")) for s in declared) != len(cases):
-            problems.append("INCONSISTENT_JUNIT_COUNTS")
-        for suite in declared:
-            if any(int(suite.get(k, "0")) != 0 for k in ("failures", "errors", "skipped")):
+        totals = Counter()
+        for suite in suites:
+            local_cases = suite.findall("testcase")
+            declared = {name: _junit_counter(suite, name)
+                        for name in ("tests", "failures", "errors", "skipped")}
+            # Per-suite checks prevent one suite's wrong count from cancelling
+            # another's. Every counted case has an explicit direct suite parent.
+            actual = {"tests": len(local_cases)}
+            actual.update({name: sum(case.find(tag) is not None for case in local_cases)
+                           for name, tag in (("failures", "failure"), ("errors", "error"),
+                                             ("skipped", "skipped"))})
+            if declared != actual:
+                problems.append("INCONSISTENT_JUNIT_COUNTS")
+            if any(declared[name] for name in ("failures", "errors", "skipped")):
                 problems.append("FAILED_ERROR_OR_SKIPPED_SUITE")
+            totals.update(actual)
+        if root.tag == "testsuites":
+            for name in ("tests", "failures", "errors", "skipped"):
+                if name in root.attrib and _junit_counter(root, name) != totals[name]:
+                    problems.append("INCONSISTENT_JUNIT_COUNTS")
         result["by_suite"] = dict(sorted(counts.items()))
         if not cases:
             problems.append("NO_TESTS")
