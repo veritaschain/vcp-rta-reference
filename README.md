@@ -62,6 +62,11 @@ that commit, not an automatically updated claim about every future main.
 External reproduction remains **not established**. This is not a new release
 or a replacement for earlier fixed kits.
 
+Recorded completion results from the later full-recipe self-check are available
+in the [selected PR #16 CI records](docs/reproduction-results/2026-10-26-pr16/README.md).
+These are unchanged first-party records, not independent review or a complete
+backup of the expiring Actions artifacts.
+
 ## Run
 
 The current regression workflows exercise Python 3.11 and 3.13.5 on Ubuntu 24.04.

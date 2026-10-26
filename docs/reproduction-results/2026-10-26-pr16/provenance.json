@@ -1,0 +1,98 @@
+{
+  "format": "vcp-rta-selected-ci-records-v1",
+  "recorded_date": "2026-10-26",
+  "scope": "Selected unchanged first-party PR16 CI records; not a full artifact archive or independent review.",
+  "source_repository": "https://github.com/veritaschain/vcp-rta-reference",
+  "source_pr": 16,
+  "source_workflow_run": "https://github.com/veritaschain/vcp-rta-reference/actions/runs/40263948191",
+  "source_head_commit": "cd2d3b7afa7b5d33aeafd3c5e0d0fe6f6b2419cc",
+  "executed_automation_commit": "d0f9ba51c181c72b064c6fb877f211fcf51f2d02",
+  "merged_automation_commit": "4a40ee40f44ca8efe1e4d4f0f07df9050d5f3b21",
+  "guide_source_commit": "a839d7a918c9a23ce170937f536e6c13b3a69b93",
+  "executed_checkpoint_commit": "cc695fe1698250878fbbc5f0c5461591ac8e0954",
+  "checkpoint_git_tree": "52bcbe53daaaecf0ad45f1e65f251d945854eee1",
+  "recipe_sha256": "216c5b292ddba98cf783f8b3637785a7027b49022deea74725f1a85434217e67",
+  "independent_reproduction": "NOT_ESTABLISHED",
+  "conformance_claim": false,
+  "historical_evidence_verdict": "INDETERMINATE",
+  "copied_records_are_byte_identical": true,
+  "source_artifact_retention_days": 30,
+  "records": [
+    {
+      "python": "3.11.17",
+      "workflow_run_id": 40263948191,
+      "artifact_id": 12625955091,
+      "artifact_name": "checkpoint-recipe-python-3.11",
+      "archive_sha256": "ead068a3295ff647596972c79de16583989500f65826ff26fd7e620c428ee4ee",
+      "archive_size_bytes": 34664,
+      "source_member_count": 22,
+      "copied_member_count": 3,
+      "files": [
+        {
+          "path": "python-3.11.17/recipe-run.json",
+          "archive_member": "checkpoint-recipe/recipe-run.json",
+          "bytes": 2161,
+          "sha256": "0a56a25ad59f620aae0b6e5428242ed497ddf2b7a4a8aba2adb6a2df482ff6c4"
+        },
+        {
+          "path": "python-3.11.17/review-assessment.json",
+          "archive_member": "checkpoint-recipe/review/review-assessment.json",
+          "bytes": 980,
+          "sha256": "e429a88e25204d76ebe54d420b2ec7e54fa74165d7737c1ab5d8dec46da17bd9"
+        },
+        {
+          "path": "python-3.11.17/original-files.sha256.json",
+          "archive_member": "checkpoint-recipe/files.sha256.json",
+          "bytes": 1964,
+          "sha256": "17fb9ae61b6c7656a71d57b4c11645cb4be3330df894b91373595c688f0c2db0"
+        }
+      ]
+    },
+    {
+      "python": "3.13.5",
+      "workflow_run_id": 40263948191,
+      "artifact_id": 12625227494,
+      "artifact_name": "checkpoint-recipe-python-3.13.5",
+      "archive_sha256": "bcea5dc8ba7c552f41613a6a6d90f671bcbf8d6b6fcf66b6ced7ed8c9d53f36d",
+      "archive_size_bytes": 34594,
+      "source_member_count": 22,
+      "copied_member_count": 3,
+      "files": [
+        {
+          "path": "python-3.13.5/recipe-run.json",
+          "archive_member": "checkpoint-recipe/recipe-run.json",
+          "bytes": 2159,
+          "sha256": "1acfaa04b3a267073e4f9b88c809430a2681891be84950fdf0b67630599c9cc4"
+        },
+        {
+          "path": "python-3.13.5/review-assessment.json",
+          "archive_member": "checkpoint-recipe/review/review-assessment.json",
+          "bytes": 980,
+          "sha256": "e429a88e25204d76ebe54d420b2ec7e54fa74165d7737c1ab5d8dec46da17bd9"
+        },
+        {
+          "path": "python-3.13.5/original-files.sha256.json",
+          "archive_member": "checkpoint-recipe/files.sha256.json",
+          "bytes": 1964,
+          "sha256": "b37069101742cb41f85182aed5d897d85c39d52346c153a73a64771173394fac"
+        }
+      ]
+    }
+  ],
+  "not_stored_here": [
+    "Original ZIP archives",
+    "Full JUnit XML and per-test outcomes",
+    "Full historical replay and 29-file input manifests",
+    "Shell recipe and terminal log",
+    "Dependency inventory and environment details beyond recipe-run.json",
+    "Launcher test log"
+  ],
+  "limitations": [
+    "Only the six files listed in records[].files are copied into this directory.",
+    "retained_report_files inside copied JSON describes the original CI artifact, not this selected archive.",
+    "original-files.sha256.json is an unchanged original manifest and includes hashes for absent members. Those hashes do not preserve or recover the absent bytes.",
+    "Copied records remain dependent on repository availability; this is not immutable storage or a permanent-retention guarantee.",
+    "Hashes establish byte agreement, not independent authorship, timestamping, certification or trust in a compromised runner.",
+    "These are previously executed first-party results, not a new execution or an external reviewer submission."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "checkpoint": "2026-10-26-pr14",
+  "executed_commit": "cc695fe1698250878fbbc5f0c5461591ac8e0954",
+  "reproduction_matches_reference": true,
+  "problems": [],
+  "main": {
+    "passed": true,
+    "cases": 809,
+    "by_suite": {
+      "test_attested_batch": 80,
+      "test_ed25519_key_admission": 78,
+      "test_input_limits": 75,
+      "test_junit_integrity": 87,
+      "test_merkle_preflight": 72,
+      "test_openssl_trust_store": 2,
+      "test_regression_runner": 33,
+      "test_report_output": 51,
+      "test_result_aggregation": 66,
+      "test_signature_preflight": 53,
+      "test_suite_inventory": 27,
+      "test_timestamp_policy": 50,
+      "test_verifier": 135
+    },
+    "problems": []
+  },
+  "historical": {
+    "passed": true,
+    "cases": 15,
+    "by_suite": {
+      "test_historical_evidence": 15
+    },
+    "problems": []
+  },
+  "evidence_verdict": "INDETERMINATE",
+  "independence_assessment": "not assessed by this script",
+  "conformance_claim": false
+}
