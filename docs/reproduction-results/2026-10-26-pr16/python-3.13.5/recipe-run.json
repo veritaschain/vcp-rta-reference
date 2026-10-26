@@ -1,0 +1,60 @@
+{
+  "format": "vcp-rta-checkpoint-recipe-run-v1",
+  "run_status": "passed",
+  "started_utc": "2026-10-26T03:24:59.873213+00:00",
+  "guide_source_commit": "a839d7a918c9a23ce170937f536e6c13b3a69b93",
+  "checkpoint_commit": "cc695fe1698250878fbbc5f0c5461591ac8e0954",
+  "checkpoint_tree": "52bcbe53daaaecf0ad45f1e65f251d945854eee1",
+  "launcher_python": "3.13.5",
+  "scope": "first-party execution of the published recipe; not independent reproduction",
+  "independent_reproduction": false,
+  "conformance_claim": false,
+  "problems": [],
+  "automation_commit": "d0f9ba51c181c72b064c6fb877f211fcf51f2d02",
+  "guide_document_blobs": {
+    "docs/REPRODUCTION_CHECKPOINT_2026-10-26.md": "f408c887a468bd33492658f91d107f98618f93a2",
+    "docs/REPRODUCTION_CHECKPOINT_2026-10-26.json": "462744e63a372df2554a3ec5cc538e7d18659aec",
+    "docs/REVIEWER_REPORT_TEMPLATE.md": "6dfdc8a31dba6afd991b7e833d2a1ca0ae76f7f1"
+  },
+  "recipe_sha256": "216c5b292ddba98cf783f8b3637785a7027b49022deea74725f1a85434217e67",
+  "recipe_exit": 0,
+  "retained_report_files": [
+    "guide-commit.txt",
+    "checkpoint.json",
+    "reviewer-report-template.md",
+    "pip-freeze.txt",
+    "openssl-version.txt",
+    "input-check.json",
+    "historical.xml",
+    "historical.log",
+    "historical.exit",
+    "historical-pack.json",
+    "replay.exit",
+    "review-assessment.json",
+    "review-files.sha256.json",
+    "regression/run.json",
+    "regression/pytest.log",
+    "regression/junit.xml",
+    "regression/artifacts.sha256.json"
+  ],
+  "cloned_guide_commit": "a839d7a918c9a23ce170937f536e6c13b3a69b93",
+  "assessment": {
+    "passed": true,
+    "problems": [],
+    "main_cases": 809,
+    "historical_cases": 15,
+    "evidence_verdict": "INDETERMINATE",
+    "environment": {
+      "python": "3.13.5",
+      "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+      "dependencies": {
+        "pytest": "9.0.2",
+        "cryptography": "46.0.4",
+        "asn1crypto": "1.5.1"
+      },
+      "openssl_executable": "/usr/bin/openssl",
+      "openssl": "OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)"
+    }
+  },
+  "finished_utc": "2026-10-26T03:25:22.802900+00:00"
+}
