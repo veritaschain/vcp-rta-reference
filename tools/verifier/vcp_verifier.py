@@ -278,6 +278,20 @@ def verify_digest_signature(signature: Any, digest: Any, algorithm: Any,
                             public_key: Optional[bytes], encoding: str) -> Dict[str, str]:
     if algorithm != "ED25519":
         return check(INDETERMINATE, "SIGNATURE_ALGORITHM_UNSUPPORTED_OR_MISSING")
+    # Syntax is observable without a key or message. Do not infer validity
+    # from successful decoding; absent signatures retain existing handling.
+    if signature is not None and signature != "":
+        if not isinstance(signature, str):
+            return check(INVALID, "MALFORMED_SIGNATURE")
+        try:
+            if re.fullmatch(r"[0-9a-fA-F]{128}", signature):
+                raw = bytes.fromhex(signature)
+            else:
+                raw = base64.b64decode(signature, validate=True)
+            if len(raw) != 64:
+                return check(INVALID, "MALFORMED_SIGNATURE_LENGTH")
+        except (ValueError, binascii.Error):
+            return check(INVALID, "MALFORMED_SIGNATURE_ENCODING")
     if public_key is None:
         return check(INDETERMINATE, "TRUSTED_KEY_MISSING")
     if not isinstance(public_key, bytes) or len(public_key) != 32:
@@ -289,17 +303,6 @@ def verify_digest_signature(signature: Any, digest: Any, algorithm: Any,
         return check(INDETERMINATE, "SIGNATURE_MISSING")
     if not _hex(digest):
         return check(INDETERMINATE, "SIGNATURE_MESSAGE_UNAVAILABLE")
-    if not isinstance(signature, str):
-        return check(INVALID, "MALFORMED_SIGNATURE")
-    try:
-        if re.fullmatch(r"[0-9a-fA-F]{128}", signature):
-            raw = bytes.fromhex(signature)
-        else:
-            raw = base64.b64decode(signature, validate=True)
-        if len(raw) != 64:
-            return check(INVALID, "MALFORMED_SIGNATURE_LENGTH")
-    except (ValueError, binascii.Error):
-        return check(INVALID, "MALFORMED_SIGNATURE_ENCODING")
     if Ed25519PublicKey is None:
         return check(INDETERMINATE, "ED25519_DEPENDENCY_UNAVAILABLE")
     if encoding not in ("raw_digest", "ascii_hex"):
