@@ -194,6 +194,17 @@ def check_bindings(envelope: Any, events: Any, record: Any,
     return result
 
 
+def _usable_policy_oid(value: Any) -> bool:
+    """Caller policy must be a bounded canonical dotted OID, not token evidence."""
+    if not isinstance(value, str) or len(value) > 4096:
+        return False
+    if not re.fullmatch(r"[0-2]\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*", value):
+        return False
+    first, second = value.split(".", 2)[:2]
+    # Avoid converting an arbitrarily large decimal arc to an integer.
+    return first == "2" or (len(second) <= 2 and int(second) <= 39)
+
+
 def verify_rfc3161(data: bytes, response: Optional[bytes], ca_pem: Optional[bytes],
                    policy_oid: Optional[str], *, untrusted_pem: Optional[bytes] = None,
                    openssl: Optional[str] = None) -> dict:
@@ -221,14 +232,18 @@ def verify_rfc3161(data: bytes, response: Optional[bytes], ca_pem: Optional[byte
             return check(INVALID, "RFC3161_TSTINFO_MISSING")
         info = content["content"].parsed
         imprint = info["message_imprint"]
-        if imprint["hash_algorithm"]["algorithm"].native != "sha256":
-            return check(INDETERMINATE, "RFC3161_IMPRINT_ALGORITHM_UNSUPPORTED")
-        if imprint["hashed_message"].native != hashlib.sha256(data).digest():
+        supported_imprint = imprint["hash_algorithm"]["algorithm"].native == "sha256"
+        if supported_imprint and imprint["hashed_message"].native != hashlib.sha256(data).digest():
             return check(INVALID, "RFC3161_IMPRINT_MISMATCH")
-        if not isinstance(policy_oid, str) or not re.fullmatch(r"[0-2](?:\.[0-9]+)+", policy_oid):
-            return check(INDETERMINATE, "TRUSTED_TSA_POLICY_MISSING_OR_UNUSABLE")
-        if info["policy"].dotted != policy_oid:
+        policy_usable = _usable_policy_oid(policy_oid)
+        # Policy comparison is independent of support for the imprint algorithm.
+        # A caller configuration error is not evidence of a token mismatch.
+        if policy_usable and info["policy"].dotted != policy_oid:
             return check(INVALID, "RFC3161_POLICY_MISMATCH")
+        if not supported_imprint:
+            return check(INDETERMINATE, "RFC3161_IMPRINT_ALGORITHM_UNSUPPORTED")
+        if not policy_usable:
+            return check(INDETERMINATE, "TRUSTED_TSA_POLICY_MISSING_OR_UNUSABLE")
     except (ValueError, TypeError, KeyError, IndexError, OverflowError, RecursionError):
         return check(INVALID, "MALFORMED_RFC3161_RESPONSE")
     if not isinstance(ca_pem, bytes) or not ca_pem:
