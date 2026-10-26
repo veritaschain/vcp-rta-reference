@@ -51,6 +51,10 @@ jobs:
           cat "$RUNNER_TEMP/checkpoint-helper-tests.log"
       - name: Execute exact published shell recipe from fresh network clone
         run: python tools/reproduction/run_checkpoint_recipe.py --output-dir "$RUNNER_TEMP/checkpoint-recipe"
+      - name: Inspect saved reports without rerunning submitted code
+        run: |
+          python tools/reproduction/check_received_report.py "$RUNNER_TEMP/checkpoint-recipe/review" \
+            > "$RUNNER_TEMP/checkpoint-intake.json"
       - name: Retain allowlisted reports, not checkout or temporary TSA material
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -59,5 +63,6 @@ jobs:
           path: |
             ${{ runner.temp }}/checkpoint-recipe/
             ${{ runner.temp }}/checkpoint-helper-tests.log
+            ${{ runner.temp }}/checkpoint-intake.json
           if-no-files-found: error
           retention-days: 30
