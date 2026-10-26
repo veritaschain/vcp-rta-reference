@@ -1,0 +1,63 @@
+name: Published checkpoint recipe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/checkpoint-reproduction.yml'
+      - 'tools/reproduction/**'
+      - 'docs/REPRODUCTION_CHECKPOINT_2026-10-26.*'
+      - 'docs/REVIEWER_REPORT_TEMPLATE.md'
+      - 'docs/CHECKPOINT_RECIPE_CI.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/checkpoint-reproduction.yml'
+      - 'tools/reproduction/**'
+      - 'docs/REPRODUCTION_CHECKPOINT_2026-10-26.*'
+      - 'docs/REVIEWER_REPORT_TEMPLATE.md'
+      - 'docs/CHECKPOINT_RECIPE_CI.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkpoint-recipe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13.5']
+    steps:
+      - name: Checkout automation and published guide history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up selected Python interpreter
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test automation guards separately from checkpoint cases
+        run: |
+          python -m unittest discover -s tools/reproduction -p 'test_*.py' -v \
+            > "$RUNNER_TEMP/checkpoint-helper-tests.log" 2>&1
+          cat "$RUNNER_TEMP/checkpoint-helper-tests.log"
+      - name: Execute exact published shell recipe from fresh network clone
+        run: python tools/reproduction/run_checkpoint_recipe.py --output-dir "$RUNNER_TEMP/checkpoint-recipe"
+      - name: Retain allowlisted reports, not checkout or temporary TSA material
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: checkpoint-recipe-python-${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/checkpoint-recipe/
+            ${{ runner.temp }}/checkpoint-helper-tests.log
+          if-no-files-found: error
+          retention-days: 30
