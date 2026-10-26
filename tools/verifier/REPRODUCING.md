@@ -1,15 +1,21 @@
 # Reproducing the verifier regression tests
 
-Updated 2026-10-26. This is a first-party test/reproduction entry point, not
-VCP/VAP conformance, normative adoption, certification, independent validation,
-or a claim that the historical Evidence Pack is fully authenticated.
+Updated 2026-10-26. This is a test/reproduction entry point, not VCP/VAP
+conformance, normative adoption, certification, independent validation, or a
+claim that the historical Evidence Pack is fully authenticated.
+
+For an outside review of a specific version, use the
+[fixed checkpoint and complete procedure](../../docs/REPRODUCTION_CHECKPOINT_2026-10-26.md),
+[reference JSON](../../docs/REPRODUCTION_CHECKPOINT_2026-10-26.json), and
+[reviewer report template](../../docs/REVIEWER_REPORT_TEMPLATE.md).
+That checkpoint pins a commit; the general commands below use your checkout.
 
 ## Run from a reviewed checkout
 
-Use Python 3.10 or newer and an OpenSSL 3.x command-line executable. The tests
-create a temporary local CA/TSA and verify actual synthetic RFC 3161 responses.
-They do not contact a commercial TSA, modify historical evidence or supply a
-missing original OpenTimestamps proof.
+Use Python 3.10 or newer and an OpenSSL 3.x command-line executable. The recorded
+CI environments are Linux; platform-specific tests include POSIX FIFOs and
+symlinks. Windows portability is not established by these results. Review the
+code before execution, preferably in a fresh disposable environment.
 
 ```sh
 python -m venv .venv
@@ -19,102 +25,127 @@ python tools/verifier/run_regression.py
 ```
 
 The default destination is a new `.verification-results/<time>-<random>/`
-directory. To choose a location, use `--output-dir /path/to/new-directory`.
-Existing output directories are rejected, as are destinations inside `evidence/`,
-`tools/`, `tests/` or `.git/`. Run only code you have reviewed, preferably in a
-fresh disposable environment. Installing dependencies and GitHub Actions setup
-require network access; the verifier tests use local fixtures, not online TSA
-services. The runner itself is not a network sandbox.
+directory. Use `--output-dir /path/to/new-directory` to choose one. Existing
+directories and destinations inside `evidence/`, `tools/`, `tests/` or `.git/`
+are refused. Do not send a report to an input filename using shell redirection.
 
-Direct dependencies are pinned to the versions used for the original verifier
-regressions. This is **not a complete transitive dependency or OS lockfile** and
-is not a claim that pinned versions will always be the most secure versions.
-Review updates separately. The report records the actual Python, platform,
-OpenSSL executable/version and direct dependency versions. CI tests Python 3.11
-(latest available patch in that line) and the original 3.13.5 baseline on
-`ubuntu-24.04`; runner images and transitive dependencies can change.
+Installing dependencies and setting up CI require network access. Timestamp
+tests create temporary local CA/TSA fixtures and verify actual signed RFC 3161
+responses; they do not contact a commercial TSA or supply a missing historical
+OpenTimestamps proof. The runner is not a network or malicious-code sandbox.
+
+Direct dependencies are pinned, not a complete transitive dependency or OS
+lockfile, and not a claim that the pins are always the most secure versions.
+Review dependency updates separately. Reports record actual Python, platform,
+OpenSSL and direct dependency versions. CI uses Python 3.11 (the available patch
+in that line) and 3.13.5 on `ubuntu-24.04`; runner images can change.
+
+## Discover the counts for your checkout
+
+`SUITES` in `run_regression.py` is the main-suite registry. Print its minimums
+rather than assuming the obsolete four-suite/250-case baseline:
+
+```sh
+python - <<'PY'
+import sys
+sys.path.insert(0, 'tools/verifier')
+import run_regression as runner
+for name, count in runner.SUITES.items():
+    print(f'{name}: {count}')
+print('main minimum:', sum(runner.SUITES.values()))
+print('separate modules:', ', '.join(sorted(runner.SEPARATE_TEST_FILES)))
+PY
+```
+
+At the fixed PR #14 checkpoint, the main run has **13 modules / 809 cases**;
+`test_historical_evidence.py` adds **15 separately executed cases**. These dated
+counts describe that checkpoint, not every future main. A main-run success does
+not imply that the historical suite ran. Run it separately:
+
+```sh
+python -m pytest -q tests/test_historical_evidence.py
+```
+
+The fixed-checkpoint procedure retains both sets of results and the full replay
+JSON. Existing K3 and other pinned reproduction kits are not replaced.
 
 ## What counts as a successful run
 
-The runner currently requires all four suites:
+The runner accounts for every test module before execution: both `test_*.py`
+and `*_test.py`, including nested candidates, must belong to its registry or the
+one explicitly separate historical suite. Unknown or missing modules, candidate
+symlinks/special files and traversal errors fail preflight. Inventory does not
+establish exact case coverage or execution of the separate suite.
 
-| Suite | Minimum collected/executed cases |
-|---|---:|
-| `tests/test_verifier.py` | 135 |
-| `tests/test_attested_batch.py` | 80 |
-| `tests/test_regression_runner.py` | 33 |
-| `tests/test_openssl_trust_store.py` | 2 |
+Every registered suite must meet its own minimum. The named real RFC 3161 test
+must be present. Pytest must exit zero, with no failed, erroneous, skipped or
+duplicate cases. JUnit results must satisfy the local UTF-8 flat-pytest profile,
+including per-suite counters. A valid-looking total alone does not pass.
+See [inventory rules](TEST_INVENTORY.md) and [report integrity](JUNIT_INTEGRITY.md).
 
-The expected baseline is **250 cases**. Each minimum is checked separately to
-avoid silently dropping one suite. The named real RFC 3161 integration test
-must be present. Pytest must exit zero; any failure, error, skip (including
-expected failures reported as skips), malformed/missing XML, duplicate test ID,
-count inconsistency or insufficient coverage makes the run unsuccessful.
+Unavailable OpenSSL or mismatched dependencies fail preflight rather than
+silently skipping crypto tests. Plugin autoload and environment-provided pytest
+extra options/plugins are disabled. Code, tests, direct dependency pins and
+non-cache archival files under `evidence/` are SHA-256 hashed before and after
+execution. Changed listed inputs or Git HEAD fail the run. These are accidental
+execution guards, not defenses against a malicious test rewriting its own report.
 
-A missing OpenSSL executable or dependency-version mismatch fails preflight
-instead of turning the cryptographic suite into a successful skipped run.
-Pytest plugin autoload and environment-provided extra options/plugins are
-disabled. Tests and verifier source files, the direct-dependency manifest, and
-all non-cache archival files under `evidence/` are SHA-256 hashed before and
-after execution. Changed inputs or a changed Git HEAD fail the run.
+## Reports and exit codes
 
-These guards catch accidental incomplete execution. They do not defend against
-a malicious test harness rewriting its own results. The runner's self-tests
-use synthetic XML/process fixtures, not cryptographic proofs.
+`run_regression.py` writes `run.json`, `pytest.log`, `junit.xml` and
+`artifacts.sha256.json`. The run report records environment, command, Git HEAD
+where available, inventory, per-suite results, problems and before/after hashes.
+Preflight failure may have only the run report and hash manifest, with no input
+hashes because inventory and dependency checks precede hashing.
 
-## Reports
+| Command | Successful execution means |
+| --- | --- |
+| `run_regression.py` | Exit 0 and `run_status: passed`; only registered main tests |
+| `pytest tests/test_historical_evidence.py` | Exit 0; expected fixed-corpus behavior reproduced |
+| `inspect_historical_pack.py --compare-reference-key` | At this checkpoint, exit **2** and evidence verdict **INDETERMINATE** |
 
-A run writes:
+The runner's other exits are 1 for failed/incomplete/preflight-failed runs and 2
+when the output directory cannot be prepared. Its exit 2 is not an evidence
+verdict. Evidence-verifier CLIs have their own exit meanings. Never interpret
+an exit code without the command and its report. Do not hide unexpected failures
+with an unconditional `|| true`.
 
-- `run.json`: run status, exact Git HEAD where available, command, environment,
-  per-suite counts, failure reasons, before/after input hashes.
-- `pytest.log` and `junit.xml`: test execution output and machine-readable cases.
-- `artifacts.sha256.json`: hashes of the files written in that output directory
-  before the hash manifest itself is written.
+Checksums detect changed bytes, not their author. Test success is not overall
+Evidence Pack validity. The temporary TSA private keys are not intentionally
+included in uploaded reports. Review logs before sharing; they may contain
+local paths or failing test details.
 
-Preflight failure may produce only `run.json` and the hash manifest. The output
-status is `passed`, `failed`, `preflight_failed` or `incomplete`, not the
-verifier's `VALID`/`INVALID`/`INDETERMINATE` verdicts. Exit zero means the
-regression run passed, **not that any Evidence Pack passed verification**.
-Checksums detect changed report bytes; they do not authenticate their author.
-No private key or certificate file from the temporary test TSA is intentionally
-included in the uploaded artifact set. Logs may contain failing test details.
+## Continuous integration and outside reports
 
-## Continuous integration and outside reproduction
+`verifier-regression.yml` and `historical-pack.yml` run separately on main pushes,
+PRs and manual dispatch. Their checkout/setup/upload actions are pinned; jobs
+have read-only repository permissions, do not persist checkout credentials or
+consume production secrets, and do not use `pull_request_target`. Artifacts have
+a 30-day retention policy, not permanent archival availability.
 
-`.github/workflows/verifier-regression.yml` runs on main pushes, pull requests
-and manual dispatch. Actions are pinned to reviewed commit IDs; the job has
-read-only repository permissions, does not persist checkout credentials, does
-not consume production secrets and does not use `pull_request_target`. Only the
-four named report files are uploaded for 30 days. CI success is first-party
-regression evidence, not independent third-party validation.
-
-An outside reviewer should record their own checked-out commit, input hashes,
-environment, command, output and discrepancies. A report must be attributed to
-its actual executor. Running this harness does not by itself establish that the
-executor is independent or that VCP/VAP conformance has been assessed. Existing
-K3 and fixed reproduction-kit baselines are unchanged.
+Outside reviewers should retain their own exact commit/tree, commands, exit
+codes, environment, hashes and discrepancies. Record the actual executor and
+any relationship to VSO separately. Permission to publish results, a personal
+name and an affiliation are separate decisions. A short agreement to run a test
+is not blanket attribution consent. Use the report template; no mailing or
+publication is performed by these instructions.
 
 ## 日本語
 
-実行入口は `python tools/verifier/run_regression.py`。既存215件、ランナー33件、CA信頼境界の追加2件を
-まとめて実行し、実行環境・コミット・コードと証拠ファイルのハッシュ・結果を残す。
-スキップ、件数不足、失敗、実行中の入力変更は成功扱いにしない。
-「回帰テスト成功」と「Evidence Packの検証成功」は別であり、独立再現・適合性・
-認証の成立を自動宣言しない。過去の署名済み証拠や規範仕様は変更しない。
+古い「4テスト群・250件」の案内を、使用するコミットの登録一覧から確認する方式に
+訂正しました。PR #14の固定版では通常809件と、別実行の公開証拠15件です。
+通常テストの成功だけで公開証拠のテストも実行済みとは扱いません。
 
-## OpenSSL 3.0 portability correction
+固定版の手順では、コミット・対象29ファイルのハッシュ・実行結果を照合します。
+証拠再検証の終了コード2は期待どおりですが、テストランナーの終了コード2とは意味が
+違います。レポートの種別と内容を必ず確認してください。独立再現、適合性、認証や
+元の外部アンカーの成立は自動宣言しません。
 
-The first CI run exposed four previously passing timestamp tests failing with
-OpenSSL 3.0.13. Diagnostics identified `Error loading store URI` for an empty
-`-CAstore` directory. The verifier now supplies the exact same caller-selected
-CA bundle through both `-CAfile` and `-CAstore`, keeping `-CApath` empty and
-overriding environment certificate paths. No additional trust root or fallback
-is introduced, and nonzero verifier exits remain INDETERMINATE. Two new actual
-local-TSA tests check this command contract and rejection of a wrong caller CA
-even when the correct chain is available as untrusted material or environment
-trust. Existing 215 tests and historical evidence are unchanged.
+## Historical OpenSSL portability correction
 
-A failure-only CI diagnostic regenerates a disposable synthetic timestamp and
-prints bounded OpenSSL stderr. It does not change the regression outcome, use
-production keys, or upload the generated private key.
+The original PR #4 CI exposed OpenSSL 3.0.13 rejecting an empty `-CAstore`
+directory. The verifier uses the same explicitly selected CA bundle in both
+`-CAfile` and `-CAstore`, an empty `-CApath`, and overridden certificate-path
+variables. No extra trust root was added. The two original portability tests
+remain in the registry. A failure-only diagnostic uses disposable synthetic
+material without changing the test verdict or uploading its generated key.

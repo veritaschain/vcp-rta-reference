@@ -48,6 +48,16 @@ VeritasChain株式会社が運営する **VeritasChain Standards Organization（
 という表記を訂正しました。テストの成功は、この期待結果を再現できたという意味で、
 証拠全体を完全合格にしたことではありません。
 
+## 固定版を使った第三者向け再現手順
+
+[2026年10月26日の固定版再現手順](docs/REPRODUCTION_CHECKPOINT_2026-10-26.md)、
+[機械可読の照合用JSON](docs/REPRODUCTION_CHECKPOINT_2026-10-26.json)、
+[実行者用の報告様式](docs/REVIEWER_REPORT_TEMPLATE.md)を用意しています。
+対象は `cc695fe1698250878fbbc5f0c5461591ac8e0954` に固定し、記録された自社CIでは
+各環境で回帰809件・公開証拠15件が成功しました。この件数はそのコミットに対する
+記録であり、将来のmainの件数を自動保証しません。**独立第三者による再現は未成立**です。
+新しいリリースや、既存の固定研究キットの差し替えではありません。
+
 ## 実行方法
 
 CIはPython 3.11と3.13.5、Ubuntu 24.04で実行します。
@@ -67,7 +77,7 @@ python tools/verifier/inspect_historical_pack.py --compare-reference-key
 埋め込まれた公開鍵を自動で信頼しません。
 
 ```sh
-# 従来の合成データ等による回帰テスト250件
+# 登録済みの回帰テスト。件数は使用する版のランナーを参照
 python tools/verifier/run_regression.py
 # 公開記録を用いた回帰テスト15件
 python -m pytest -q tests/test_historical_evidence.py
