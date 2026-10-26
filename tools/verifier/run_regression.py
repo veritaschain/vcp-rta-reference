@@ -13,6 +13,7 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import uuid
@@ -23,7 +24,9 @@ SUITES = {"test_verifier": 135, "test_attested_batch": 80, "test_regression_runn
           "test_openssl_trust_store": 2, "test_report_output": 51, "test_input_limits": 75,
           "test_result_aggregation": 66, "test_ed25519_key_admission": 78,
           "test_timestamp_policy": 50, "test_signature_preflight": 53,
-          "test_merkle_preflight": 72}
+          "test_merkle_preflight": 72, "test_suite_inventory": 27}
+# Explicitly executed by .github/workflows/historical-pack.yml, not this runner.
+SEPARATE_TEST_FILES = frozenset({"test_historical_evidence.py"})
 REQUIRED_TEST = ("test_attested_batch", "test_real_rfc3161_response_signature_chain_and_imprint")
 DEPENDENCIES = ("pytest", "cryptography", "asn1crypto")
 LIMIT = 16 * 1024 * 1024
@@ -76,6 +79,51 @@ def assess_junit(path: Path, returncode: int, minimums=None) -> dict:
     result["problems"] = sorted(set(problems))
     result["passed"] = not result["problems"]
     return result
+
+
+def assess_test_inventory(root: Path) -> dict:
+    """Account for test modules without importing them or following directories.
+
+    This is a repository file-inventory policy, not pytest collection, proof of
+    case coverage, or a sandbox for tests/conftest/plugins. Only the separately
+    named historical suite is deferred to its existing workflow.
+    """
+    regression = {name + ".py" for name in SUITES}
+    expected = regression | SEPARATE_TEST_FILES
+    discovered, problems = set(), []
+    directory = root / "tests"
+    def is_test(name):
+        return name.endswith(".py") and (name.startswith("test_") or name.endswith("_test.py"))
+    def fail_walk(error):
+        raise error
+    try:
+        if directory.is_symlink():
+            raise ValueError("TEST_DIRECTORY_SYMLINK")
+        if not directory.is_dir():
+            raise ValueError("TEST_DIRECTORY_MISSING_OR_UNUSABLE")
+        for parent, directories, filenames in os.walk(directory, followlinks=False, onerror=fail_walk):
+            for name in list(directories):
+                path = Path(parent) / name
+                if path.is_symlink():
+                    problems.append("TEST_DIRECTORY_SYMLINK:" + path.relative_to(directory).as_posix())
+                    directories.remove(name)
+            for name in filenames:
+                if not is_test(name):
+                    continue
+                path = Path(parent) / name
+                relative = path.relative_to(directory).as_posix()
+                if not stat.S_ISREG(path.lstat().st_mode):
+                    problems.append("TEST_MODULE_NOT_REGULAR:" + relative)
+                    continue
+                discovered.add(relative)
+    except (OSError, ValueError) as exc:
+        problems.append("TEST_INVENTORY_UNUSABLE:" + type(exc).__name__)
+    problems.extend("UNREGISTERED_TEST_MODULE:" + name for name in discovered - expected)
+    problems.extend("EXPECTED_TEST_MODULE_MISSING:" + name for name in expected - discovered)
+    problems = sorted(set(problems))
+    return {"passed": not problems, "regression_files": sorted(regression),
+            "separate_files": sorted(SEPARATE_TEST_FILES), "discovered_files": sorted(discovered),
+            "problems": problems}
 
 
 def input_manifest(root: Path) -> dict:
@@ -166,12 +214,15 @@ def main(argv=None) -> int:
               "scope": "first-party synthetic regression; not conformance or independent reproduction",
               "git_head": git_head(ROOT), "environment": environment(), "problems": []}
     try:
-        before = input_manifest(ROOT)
-        report["inputs_before_sha256"] = before
-        report["problems"] = preflight(ROOT, report["environment"])
+        # Refuse unaccounted test modules before hashing or executing sources.
+        report["test_inventory"] = assess_test_inventory(ROOT)
+        report["problems"] = (report["test_inventory"]["problems"]
+                              + preflight(ROOT, report["environment"]))
         if report["problems"]:
             report["run_status"] = "preflight_failed"
         else:
+            before = input_manifest(ROOT)
+            report["inputs_before_sha256"] = before
             command = [sys.executable, "-m", "pytest", "-q", "--strict-config", "--strict-markers",
                        "-o", "addopts=", "--junitxml=" + str(output / "junit.xml")]
             command += ["tests/" + name + ".py" for name in SUITES]
