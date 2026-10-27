@@ -205,18 +205,18 @@ MUTATIONS = {
     'invented_independence': ('review-assessment.json', 'independence_assessment', 'independent'),
 }
 for name, (filename, key, value) in MUTATIONS.items():
-    def test(self, filename=filename, key=key, value=value):
+    def _generated_test(self, filename=filename, key=key, value=value):
         obj = self.read(filename); obj[key] = copy.deepcopy(value)
         self.put(filename, obj)
         self.rehash()  # Consistent manifests must not conceal semantic changes.
         self.rejected()
-    setattr(ReceivedReportTests, 'test_' + name, test)
+    setattr(ReceivedReportTests, 'test_' + name, _generated_test)
 for index, name in enumerate(c.FILES):
-    def test(self, name=name):
+    def _generated_test(self, name=name):
         (self.directory / name).unlink()
         result = self.rejected()
         self.assertIn('MISSING:' + name, result['problems'])
-    setattr(ReceivedReportTests, 'test_missing_file_%02d' % index, test)
+    setattr(ReceivedReportTests, 'test_missing_file_%02d' % index, _generated_test)
 
 
 if __name__ == '__main__':
