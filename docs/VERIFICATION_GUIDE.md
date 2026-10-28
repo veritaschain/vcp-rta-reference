@@ -1,6 +1,6 @@
 # VCP v1.1 Verification Guide
 
-This guide shows how to run the VCP v1.1 verifier on the published Evidence Pack and how to read its results. Each check is VALID, INVALID, or UNVERIFIABLE (検証不能). The verifier does not claim v1.2 support, and it does not treat a missing input as a pass.
+This guide shows how to run the VCP v1.1 verifier on the published Evidence Pack and how to read its results. The verifier is three-valued: each check is VALID, INVALID, or UNVERIFIABLE (検証不能). A missing `merkle_root.ots` makes the external anchor UNVERIFIABLE, not a pass. The Merkle verdict uses the VCP v1.1 duplicate-odd-node tree, not strict RFC 6962. There is no claim of VCP v1.2 full conformity. This is a first-party reference pack, not a certified product, and it is not Production Ready. External implementations recorded here: zero. Evidence Pack procedural acceptances recorded here: zero. Unresolved items are in [KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
 
 Third parties can reproduce these steps without access to the original trading system.
 
@@ -18,7 +18,7 @@ python3 -m pip install cryptography
 
 If `cryptography` is not installed, signature checks are **UNVERIFIABLE**. They are not reported as passed.
 
-The verifier implements **VCP v1.1 only**. It does not claim v1.2 support.
+The verifier implements **VCP v1.1 only**. It does not claim v1.2 full conformity.
 
 ---
 
@@ -133,6 +133,8 @@ This test simulates the following attack scenarios:
 3. **Insertion Attack** - Fake event injection
 
 Verify that all cases report **[DETECTED]**.
+
+The script is an older demo. Its banner still says "Fully Compliant" and "RFC 6962 compliant". Those lines were not rewritten. They are not the three-valued verifier result. The tree in that script duplicates the odd node; that is the VCP v1.1 construction, not strict RFC 6962 §2.1.
 
 ### Step 5: Manually Verify Tampered Sample
 

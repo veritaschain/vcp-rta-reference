@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Later correction — 2026-10-28
+
+Documentation only. This entry does not rewrite the notes below. Signed event data, the published Merkle root, anchor files, existing git tags, and `evidence/02_verification/verification_report.txt` were not changed. The 2026-10-22 verifier output was not regenerated.
+
+- Reader-facing wording states what is implemented, what is known-unresolved, and what is not claimed. This repository is a first-party reference pack. It is not a certified product and it is not Production Ready. There is no claim of VCP v1.2 full conformity.
+- `evidence/VERIFICATION_STATUS.md` records the three-valued verifier, that a missing `merkle_root.ots` makes the external anchor UNVERIFIABLE, and that the Merkle tree is the VCP v1.1 duplicate-odd-node construction rather than strict RFC 6962. External implementations recorded here: zero. Evidence Pack procedural acceptances recorded here: zero.
+- `KNOWN_ISSUES.md` records schema and norm gaps, and signature, Merkle, and numeric-precision issues still under review for VCP v1.2.
+- Descriptive fields in `evidence/evidence_index.json` carry the same limits. `MerkleRoot`, identifiers, counts, timestamps, and file paths were left as published.
+- The historical report and the older tamper-detection demo still contain superseded "Fully Compliant" wording. Those files were not edited.
+
 ## Later correction — 2026-10-22
 
 A new verification report only. This entry does not rewrite the notes below. Signed event data, the published Merkle root, anchor files, existing git tags, and `evidence/02_verification/verification_report.txt` were not changed.

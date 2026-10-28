@@ -1,6 +1,6 @@
 ## Related reference implementations
 
-Other public repositories, listed without a claim about priority or certification:
+Other public repositories from the same organization, listed without a claim about priority, certification, or procedural acceptance. This pack records zero external implementations:
 
 - cTrader: https://github.com/veritaschain/vcp-ctrader-rta-reference
 - FIX Protocol: https://github.com/veritaschain/vcp-fix-rta-reference
@@ -13,12 +13,16 @@ Other public repositories, listed without a claim about priority or certificatio
 [**English**](README.md) | [日本語](README.ja.md)
 
 ![VCP v1.1](https://img.shields.io/badge/VCP-v1.1-blue)
-![Tier Silver](https://img.shields.io/badge/Tier-Silver-silver)
+![File label Silver, anchor not confirmed](https://img.shields.io/badge/File%20label-Silver%20(anchor%20not%20confirmed)-lightgrey)
 ![License CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)
 
 > **"Verify, Don't Trust."**
 
-VCP-RTA is a VCP **v1.1** evidence pack for an algorithmic-trading log. v1.2 is not claimed here. Third parties can check the Ed25519 signatures and the published Merkle root with `tools/verifier/vcp_verifier.py`. The external OpenTimestamps anchor cannot be checked from the files in this repository. See [evidence/VERIFICATION_STATUS.md](evidence/VERIFICATION_STATUS.md).
+VCP-RTA is a first-party **v1.1** reference pack for an algorithmic-trading log. It is not a certified product, and it is not Production Ready. There is no claim of VCP v1.2 full conformity.
+
+The verifier in `tools/verifier/vcp_verifier.py` is three-valued (VALID, INVALID, UNVERIFIABLE). It can check the Ed25519 signatures and the published Merkle root. That root is the VCP v1.1 duplicate-odd-node tree, not a strict RFC 6962 §2.1 Merkle Tree Hash. `merkle_root.ots` is missing, so the external anchor is UNVERIFIABLE. External implementations recorded here: zero. Evidence Pack procedural acceptances recorded here: zero.
+
+See [evidence/VERIFICATION_STATUS.md](evidence/VERIFICATION_STATUS.md) and [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 `docs/VCP_Worlds_First_Evidence_Report.pdf` (the same file as `VCP_Worlds_First_Evidence_Report.pdf` at the repository root) is kept unchanged. Its filename is not a verification result for this pack, and the PDF was not modified.
 
@@ -76,6 +80,7 @@ vcp_v1_1_repo_aligned/
 │   └── architecture.md              # Three-layer architecture
 ├── CHANGELOG.md
 ├── DISCLAIMER.md
+├── KNOWN_ISSUES.md                  # Unresolved schema, signature, Merkle, and precision items
 └── LICENSE
 ```
 ---
@@ -115,7 +120,7 @@ Overall **UNVERIFIABLE** (exit 2), because the external anchor is not confirmed.
 - Merkle root: **VALID** against `86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e`
 - External anchor: **UNVERIFIABLE**. `merkle_root.ots` is not in the public files
 
-`evidence/03_tamper_detection/tampered_chain.jsonl`, with the same `-s` and `-k`, is **INVALID** (exit 1). The script `tamper_detection_test.py` is an older demo; its banner still says RFC 6962. Use the verifier above for the three-valued result.
+`evidence/03_tamper_detection/tampered_chain.jsonl`, with the same `-s` and `-k`, is **INVALID** (exit 1). The script `tamper_detection_test.py` is an older demo. Its banner still says "Fully Compliant" and "RFC 6962 compliant". Those lines were left in place and are not the verifier result. Use the verifier above for the three-valued result.
 
 `evidence/02_verification/verification_report.txt` is a historical output kept unchanged. Its "Fully Compliant" wording is superseded. The current result is [`evidence/02_verification/verification_report_2026-10-22.txt`](evidence/02_verification/verification_report_2026-10-22.txt) (JSON: [`verification_report_2026-10-22.json`](evidence/02_verification/verification_report_2026-10-22.json)).
 
@@ -129,7 +134,7 @@ Overall **UNVERIFIABLE** (exit 2), because the external anchor is not confirmed.
 | **Signal Events** | 20 |
 | **Order Events** | 20 |
 | **VCP Version** | 1.1 |
-| **Tier** | Silver |
+| **Tier label in the files** | Silver. Not a confirmed tier: `merkle_root.ots` is missing, so the external anchor is UNVERIFIABLE |
 
 ### Anonymization
 

@@ -3,12 +3,16 @@
 [English](README.md) | [**日本語**](README.ja.md)
 
 ![VCP v1.1](https://img.shields.io/badge/VCP-v1.1-blue)
-![Tier Silver](https://img.shields.io/badge/Tier-Silver-silver)
+![File label Silver, anchor not confirmed](https://img.shields.io/badge/File%20label-Silver%20(anchor%20not%20confirmed)-lightgrey)
 ![License CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)
 
 > **"信頼するな、検証せよ。"**
 
-VCP-RTAは、アルゴリズム取引ログの **VCP v1.1** 形式のエビデンスパックです。v1.2 はここでは主張しません。第三者が `tools/verifier/vcp_verifier.py` で Ed25519 署名と公開された Merkle 根を確認できます。OpenTimestamps の外部アンカーは、このリポジトリの公開ファイルからは確認できません。詳細は [evidence/VERIFICATION_STATUS.md](evidence/VERIFICATION_STATUS.md) を参照してください。
+VCP-RTA は、アルゴリズム取引ログの第一者による **VCP v1.1** 参照パックです。認証された製品ではなく、Production Ready でもありません。VCP v1.2 への完全な適合は主張しません。
+
+`tools/verifier/vcp_verifier.py` は三値（VALID / INVALID / UNVERIFIABLE）の検証器です。Ed25519 署名と公開された Merkle 根を検査できます。その根は VCP v1.1 の奇数ノード複製であり、厳密な RFC 6962 §2.1 ではありません。`merkle_root.ots` が無いため、外部アンカーは UNVERIFIABLE です。このパックが記録する外部実装は 0、Evidence Pack の手続き上の受理は 0 です。
+
+詳細は [evidence/VERIFICATION_STATUS.md](evidence/VERIFICATION_STATUS.md) と [KNOWN_ISSUES.md](KNOWN_ISSUES.md) を参照してください。
 
 **注:** 口座番号、チケットID等の機密情報はプライバシー保護のため匿名化されています。
 
@@ -54,6 +58,7 @@ vcp_v1_1_repo_aligned/
 ├── README.md / README.ja.md
 ├── CHANGELOG.md
 ├── DISCLAIMER.md
+├── KNOWN_ISSUES.md                  # スキーマ、署名、Merkle、精度の未解決事項
 └── LICENSE
 ```
 
@@ -77,7 +82,7 @@ python tools/verifier/vcp_verifier.py \
 
 この Merkle 木は VCP v1.1 の構成（葉に `0x00`、内部ノードに `0x01`、奇数ノードは複製）です。厳密な RFC 6962 §2.1 ではありません。
 
-`tampered_chain.jsonl` を同じ `-s` と `-k` で検証すると **INVALID**（終了コード 1）です。
+`tampered_chain.jsonl` を同じ `-s` と `-k` で検証すると **INVALID**（終了コード 1）です。`tamper_detection_test.py` は古いデモで、バナーには “Fully Compliant” と “RFC 6962 compliant” が残っています。その文言は書き換えておらず、検証器の結果ではありません。
 
 `evidence/02_verification/verification_report.txt` は過去の生成出力で、バイト列はそのまま残しています。そこに書かれた “Fully Compliant” という文言は現行ではなく、後継の結果に置き換えられています。現在の結果は [`evidence/02_verification/verification_report_2026-10-22.txt`](evidence/02_verification/verification_report_2026-10-22.txt) です（JSON は [`verification_report_2026-10-22.json`](evidence/02_verification/verification_report_2026-10-22.json)）。
 
@@ -92,7 +97,7 @@ python tools/verifier/vcp_verifier.py \
 | **注文イベント** | 20 |
 | **期間** | 2025-11-20 〜 2025-11-21 |
 | **VCPバージョン** | 1.1 |
-| **ティア** | Silver |
+| **ファイル上のティア表記** | Silver。確認済みティアではない。`merkle_root.ots` が無く、外部アンカーは UNVERIFIABLE |
 
 ---
 

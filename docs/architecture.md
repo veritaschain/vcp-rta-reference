@@ -2,7 +2,7 @@
 
 ## Overview
 
-VCP v1.1 describes a three-layer architecture for trading logs. In this repository the verifier checks Layer 1 signatures and the Layer 2 Merkle root. Layer 3, the external anchor, cannot be confirmed from the public files. This document describes v1.1 only. v1.2 is not claimed here.
+VCP v1.1 describes a three-layer architecture for trading logs. In this repository the three-valued verifier checks Layer 1 signatures and the Layer 2 Merkle root. Layer 3, the external anchor, is UNVERIFIABLE because `merkle_root.ots` is missing. This document describes v1.1 only. There is no claim of VCP v1.2 full conformity. This is a first-party reference pack, not a certified product, and it is not Production Ready. See [KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -16,20 +16,20 @@ VCP v1.1 describes a three-layer architecture for trading logs. In this reposito
 │  ├─ Timestamp (dual format ISO+int64): REQUIRED                    │
 │  └─ External Anchor (OpenTimestamps): named here, not confirmed   │
 │                                                                     │
-│  Frequency: Daily (Silver Tier)                                    │
+│  Frequency: Daily in the v1.1 text. Anchor here is not confirmed   │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  LAYER 2: Collection Integrity    ← Core for external verifiability │
 │  ────────────────────────────────                                   │
-│  Purpose: Prove completeness of event batches                       │
+│  Purpose: Compare a batch with a published Merkle root              │
 │                                                                     │
 │  Components:                                                        │
 │  ├─ Merkle Tree (VCP v1.1 duplicate-odd-node): REQUIRED            │
 │  ├─ Merkle Root: REQUIRED                                          │
 │  └─ Audit Path (for verification): REQUIRED                        │
 │                                                                     │
-│  Note: Enables third-party verification of batch completeness      │
+│  Note: Recomputes the v1.1 duplicate-odd-node root, not RFC 6962   │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
@@ -155,7 +155,7 @@ Each event may reference the previous event's hash:
 Event 1 ──PrevHash──> Event 2 ──PrevHash──> Event 3
 ```
 
-**v1.1 change:** PrevHash is now OPTIONAL. Merkle Tree provides equivalent completeness guarantees.
+**v1.1 change:** PrevHash is now OPTIONAL. When an expected root is supplied, the verifier can compare the file with the VCP v1.1 duplicate-odd-node root. That comparison is not a completeness guarantee beyond the checks that actually run, and it is not an external timestamp.
 
 ---
 

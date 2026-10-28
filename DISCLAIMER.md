@@ -2,7 +2,7 @@
 
 ## English
 
-This evidence pack is provided as a **reference implementation** of VCP (Verifiable Chain Protocol) v1.1.
+This repository is a **first-party reference pack** for VCP (Verifiable Chain Protocol) v1.1. It is not a certified product. It is not Production Ready. It does not claim VCP v1.2 full conformity. The verifier is three-valued. A missing `merkle_root.ots` leaves the external anchor UNVERIFIABLE. The Merkle tree is the VCP v1.1 duplicate-odd-node construction, not strict RFC 6962. External implementations recorded here: zero. Evidence Pack procedural acceptances recorded here: zero. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 ### Important Notes
 
@@ -30,7 +30,7 @@ This evidence pack is provided as a **reference implementation** of VCP (Verifia
 
 ## 日本語
 
-このエビデンスパックは、VCP (Verifiable Chain Protocol) v1.1の**リファレンス実装**として提供されています。
+このリポジトリは、VCP (Verifiable Chain Protocol) v1.1 の**第一者による参照パック**です。認証された製品ではなく、Production Ready でもありません。VCP v1.2 への完全な適合は主張しません。検証器は三値です。`merkle_root.ots` が無いため外部アンカーは UNVERIFIABLE です。Merkle 木は VCP v1.1 の奇数ノード複製であり、厳密な RFC 6962 ではありません。このパックが記録する外部実装は 0、Evidence Pack の手続き上の受理は 0 です。詳細は [KNOWN_ISSUES.md](KNOWN_ISSUES.md) を参照してください。
 
 ### 重要な注意事項
 

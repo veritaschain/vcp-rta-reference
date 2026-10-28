@@ -4,7 +4,20 @@ This note is a later correction. It does not replace `04_anchor/security_object.
 
 `86c05dbad79ffe6fdb5c3063128df0af0bcb5a3e95f4586348f13ca49778a47e`
 
-This repository is VCP v1.1 format. v1.2 is not claimed here.
+This repository is a first-party VCP v1.1 reference pack. It is not a certified product. It is not Production Ready. There is no claim of VCP v1.2 full conformity.
+
+## What is implemented, unresolved, and not claimed
+
+**Implemented.** `tools/verifier/vcp_verifier.py` is a three-valued verifier. Each check is VALID, INVALID, or UNVERIFIABLE (検証不能). On the published pack, with the trusted public key and the security object, Ed25519 signatures for the 40 events and the recomputed Merkle root are VALID.
+
+**Known-unresolved.** `merkle_root.ots` is not in the public files. A missing `.ots` proof means the external anchor is UNVERIFIABLE. Claimed status `ANCHORED` in `04_anchor/anchor_reference.json` is not confirmation. The overall result on the published pack is therefore UNVERIFIABLE (exit code 2). Schema and norm gaps, and signature, Merkle, and numeric-precision issues, remain under review for VCP v1.2. See [KNOWN_ISSUES.md](../KNOWN_ISSUES.md).
+
+**Not claimed, and not implemented here.**
+
+- The Merkle tree is the VCP v1.1 duplicate-odd-node construction (SHA-256, `0x00` on leaves, `0x01` on internal nodes, odd node duplicated). It is not a strict RFC 6962 §2.1 Merkle Tree Hash. For these 40 leaves the strict root is `4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3` and is not the verdict.
+- This pack does not claim VCP v1.2 full conformity. The verifier's spec version is fixed at v1.1.
+- External implementations recorded by this pack: zero. Evidence Pack procedural acceptances recorded by this pack: zero.
+- The file label `Silver` is the label stored in the pack. It is not confirmation that Silver anchor requirements are met.
 
 ## Coverage of `evidence_index.json`
 
@@ -14,7 +27,7 @@ This repository is VCP v1.1 format. v1.2 is not claimed here.
 - The Merkle root is computed from those event hashes.
 - Event signatures are Ed25519 over the raw 32-byte `EventHash`. The security-object signature is Ed25519 over the raw Merkle root.
 
-The SHA-256 of `evidence_index.json` does not appear in the event log, the security object, or the anchor reference. Descriptive fields in the index were adjusted in this correction. `MerkleRoot`, identifiers, counts, timestamps, and file paths in the index were left as published.
+The SHA-256 of `evidence_index.json` does not appear in the event log, the security object, or the anchor reference. Descriptive fields in the index were adjusted in the 2026-10-21 correction and again on 2026-10-28. `MerkleRoot`, identifiers, counts, timestamps, and file paths in the index were left as published.
 
 ## What the verifier checks
 
@@ -22,7 +35,7 @@ With `tools/verifier/vcp_verifier.py`, the trusted public key, and the security 
 
 - Ed25519 signatures of the 40 events verify against `04_anchor/public_key.json`.
 - The recomputed Merkle root matches the published root.
-- That tree is the VCP v1.1 construction: SHA-256, `0x00` on leaves, `0x01` on internal nodes, odd nodes duplicated. It is not a strict RFC 6962 §2.1 Merkle Tree Hash (largest power of two less than the node count). For these 40 leaves the strict root is different (`4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3`) and is not the verdict.
+- That tree is the VCP v1.1 duplicate-odd-node construction: SHA-256, `0x00` on leaves, `0x01` on internal nodes, odd nodes duplicated. It is not a strict RFC 6962 §2.1 Merkle Tree Hash (largest power of two less than the node count). For these 40 leaves the strict root is different (`4fba6e25694a4c7c0a13fae55d5fe2e538c69036cd5a45c30ef2ca799bd785c3`) and is not the verdict.
 
 ## External anchor
 
@@ -38,10 +51,14 @@ Places searched:
 - Default-branch file trees of the public `veritaschain` repositories listed by the GitHub user API (27 repositories), plus a shallow clone of each repository other than this one. No `*.ots` file, no `merkle_root.ots`, and no copy of root `86c05dba…`. Other repositories mention `.ots` only as sample code that would write a proof.
 - `docs/VCP_Worlds_First_Evidence_Report.pdf` (same bytes as the copy at the repository root) contains neither `.ots` nor `86c05`.
 
-The external anchor cannot be verified from the public materials.
+The external anchor cannot be verified from the public materials. Because `.ots` is missing, the three-valued verifier reports the external anchor as UNVERIFIABLE.
 
 ## Older wording left in place
 
 `02_verification/verification_report.txt` still says "Fully Compliant" and "Merkle Root (RFC 6962)". That file is an older generated report. It was not rewritten. The current verifier does not use that wording.
+
+`03_tamper_detection/tamper_detection_test.py` is an older demo. Its banner still says "Fully Compliant" and "RFC 6962 compliant". That script was not rewritten. Those lines are not the verifier result.
+
+`docs/VCP_Worlds_First_Evidence_Report.pdf` (same bytes as the copy at the repository root) was not modified. The filename is not a verification result and is not a priority claim for this pack.
 
 `02_verification/verification_report.txt` is a historical output kept unchanged. Its "Fully Compliant" wording is superseded. The current result is `02_verification/verification_report_2026-10-22.txt` (JSON: `02_verification/verification_report_2026-10-22.json`).

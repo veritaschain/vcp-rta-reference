@@ -1,13 +1,13 @@
 # VCP v1.1 Integration Examples
 
-This directory contains reference implementations demonstrating how to integrate VCP v1.1 event logging into AI-driven trading systems.
+This directory contains a sample logger for VCP v1.1-shaped events. It is not the published evidence pack, not a certified product, and not Production Ready. It does not claim VCP v1.2 full conformity. Use `tools/verifier/vcp_verifier.py` on `evidence/` for the three-valued result. See [KNOWN_ISSUES.md](../../KNOWN_ISSUES.md).
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `vcp_logger.py` | VCP v1.1 Silver Tier event logger module |
-| `vcp_poc_demo.py` | Demonstration script simulating trade lifecycles |
+| `vcp_logger.py` | Sample logger. Comments still say "Silver Tier compliant" and "RFC 6962". Those phrases are not a verdict. |
+| `vcp_poc_demo.py` | Demonstration script. It still prints "Silver Tier compliance". That line is not a verdict. |
 
 ## Quick Start
 
@@ -156,10 +156,10 @@ if anchor:
 ### Step 5: Verify Chain
 
 ```bash
-# Command line verification
+# Sample logger checks its own file. This is not tools/verifier/vcp_verifier.py.
 python vcp_logger.py vcp/vcp_events.jsonl
 
-# With anchor verification
+# Pass a local anchor record written by this logger. This does not confirm OpenTimestamps.
 python vcp_logger.py vcp/vcp_events.jsonl -a vcp/anchors/anchor_*.json
 ```
 
@@ -186,13 +186,13 @@ The logger automatically anonymizes sensitive information:
 | CLS | Close | Position closed |
 | REJ | Reject | Order rejected / VETO applied |
 
-## Security Features
+## What this sample actually does
 
-- **SHA-256 Hashing**: RFC 8785 canonicalized JSON
-- **Ed25519 Signatures**: Per-event digital signatures
-- **RFC 6962 Merkle Tree**: Batch integrity proof
-- **PrevHash Chain**: Real-time tamper detection
-- **External Anchoring**: OpenTimestamps compatible
+- **SHA-256 hashing.** If `canonicaljson` is installed, the logger calls that library. Otherwise it uses sorted-key compact JSON. That is not a claim that every RFC 8785 case is covered. The published pack's EventHash uses sorted-key `json.dumps` concatenation, which is a different encoding. See the note in the repository README.
+- **Ed25519 signatures** on events this logger creates. The encoding is not the published pack's encoding.
+- **Merkle tree:** `0x00` / `0x01` prefixes with the odd node duplicated, the same shape as the VCP v1.1 tree in `evidence/`. Comments in `vcp_logger.py` still say RFC 6962. That construction is not strict RFC 6962 §2.1.
+- **PrevHash** between events this logger writes.
+- **Anchor record:** the logger can write a local anchor file. This directory does not confirm an OpenTimestamps proof. On the published pack, a missing `merkle_root.ots` means the external anchor is UNVERIFIABLE.
 
 ## License
 
@@ -201,4 +201,6 @@ CC BY 4.0
 ## See Also
 
 - [VCP Specification v1.1](https://github.com/veritaschain/vcp-spec)
-- [Verification Guide](../docs/VERIFICATION_GUIDE.md)
+- [Verification Guide](../../docs/VERIFICATION_GUIDE.md)
+- [Verification status](../../evidence/VERIFICATION_STATUS.md)
+- [Known issues](../../KNOWN_ISSUES.md)

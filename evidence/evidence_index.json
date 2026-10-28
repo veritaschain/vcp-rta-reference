@@ -4,7 +4,7 @@
   "PolicyID": "org.veritaschain.rta:silver-reference-v1",
   "AgentID": "VCP-RTA-Reference",
   "CreatedAt": "2026-01-04T00:21:29.355+00:00",
-  "Description": "VCP v1.1 evidence pack. Ed25519 signatures and the VCP v1.1 Merkle root can be checked with tools/verifier. External anchor confirmation is not available from the public files. See VERIFICATION_STATUS.md.",
+  "Description": "First-party VCP v1.1 reference pack. Not a certified product and not Production Ready. No claim of VCP v1.2 full conformity. The three-valued verifier can check Ed25519 signatures and the VCP v1.1 duplicate-odd-node Merkle root. merkle_root.ots is missing, so the external anchor is UNVERIFIABLE. External implementations recorded here: 0. Evidence Pack procedural acceptances recorded here: 0. See VERIFICATION_STATUS.md and KNOWN_ISSUES.md.",
   "Compliance": {
     "ThreeLayerArchitecture": "Event signatures and a Merkle root are present. External anchor confirmation is not.",
     "RFC6962MerkleTree": false,
@@ -14,7 +14,12 @@
     "ExternalAnchor": false,
     "AnchorTarget": "OpenTimestamps (named in 04_anchor/anchor_reference.json)",
     "AnchorStatus": "UNVERIFIABLE",
-    "AnchorNote": "merkle_root.ots is named but was not found in public git history, tags, GitHub release assets, or other public veritaschain repositories. See VERIFICATION_STATUS.md."
+    "AnchorNote": "merkle_root.ots is missing, so the external anchor is UNVERIFIABLE. The file was not found in public git history, tags, GitHub release assets, or other public veritaschain repositories. See VERIFICATION_STATUS.md.",
+    "Verifier": "three-valued (VALID, INVALID, UNVERIFIABLE). A missing .ots proof is UNVERIFIABLE, not a pass.",
+    "V12FullConformity": "Not claimed. Spec version in this pack is 1.1.",
+    "ProductStatus": "First-party reference pack. Not a certified product. Not Production Ready.",
+    "ExternalImplementations": 0,
+    "EvidencePackProceduralAcceptances": 0
   },
   "Anonymization": {
     "TicketNumbers": "SHA-256 hashed",
