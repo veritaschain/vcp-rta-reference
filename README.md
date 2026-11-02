@@ -123,7 +123,7 @@ Related first-party repositories: [cTrader](https://github.com/veritaschain/vcp-
 [Cloudflare](https://github.com/veritaschain/vcp-cloudflare-rta-reference).
 This replay does not validate those repositories or promote their status.
 
-The [historical "World's First" report](VCP_Worlds_First_Evidence_Report.pdf)
+The [historical "World's First" report](docs/VCP_Worlds_First_Evidence_Report.pdf)
 is preserved as an earlier research record, not adopted here as a verified
 priority claim. Earlier README wording is available in Git history.
 For the separate newer offline SDK, see [vcp-sdk](https://github.com/veritaschain/vcp-sdk).
@@ -136,3 +136,9 @@ not determined by the version label in this archived pack.
 Technical contact: standards@veritaschain.org.
 
 **VeritasChain Standards Organization (VSO): Verify, Don't Trust.**
+
+## License scope clarification — 2 November 2026
+
+Documentation remains CC BY 4.0. First-party code, scripts, code examples and schemas additionally offer [Apache-2.0](LICENSE-CODE); existing licenses and third-party notices remain in effect. See [LICENSE](LICENSE) for the scope and preserved prior terms. This editorial licensing note does not change protocol requirements or claim conformance.
+
+The byte-identical duplicate of the historical report was removed from the repository root on 2 November 2026. The canonical archive copy remains under docs/ without content changes.
