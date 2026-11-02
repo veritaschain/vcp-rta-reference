@@ -98,8 +98,14 @@ python -m pytest -q tests/test_historical_evidence.py
 プラットフォーム別の関連リポジトリは[英語README](README.md#related-implementations-and-historical-materials)にあります。
 これらの関連実装は今回の40件の再検証対象ではありません。
 
-[過去の「World's First」調査資料](VCP_Worlds_First_Evidence_Report.pdf)は保存していますが、
+[過去の「World's First」調査資料](docs/VCP_Worlds_First_Evidence_Report.pdf)は保存していますが、
 今回その先行性主張を検証済みとして採用してはいません。仕様の現行状態は
 [VCP仕様リポジトリ](https://github.com/veritaschain/vcp-spec)で確認してください。
 
 [CC BY 4.0](LICENSE)。[免責事項](DISCLAIMER.md)。技術窓口：standards@veritaschain.org。
+
+## ライセンスの適用範囲 — 2026年11月2日
+
+文書は引き続きCC BY 4.0です。自社作成のコード・スクリプト・コード例・スキーマには、[Apache-2.0](LICENSE-CODE)による利用の選択肢を追加しています。従来の許諾と第三者の表示は維持します。詳細は[LICENSE](LICENSE)を参照してください。仕様の要件や適合状態を変更するものではありません。
+
+同日に、ルートとdocsにあった同一PDFをdocs側へ一本化しました。過去の調査資料の内容は変更していません。
